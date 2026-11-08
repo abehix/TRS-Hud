@@ -257,6 +257,7 @@ UI.lang = Tabs.Settings:AddDropdown("Language", {
             if Fluent then Fluent:Destroy() end
             _G.TRSPanelLoaded:Destroy()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/abehix/TRS-Hud/main/abejo.lua"))()
+                
         end
     end
 })
