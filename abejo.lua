@@ -7,9 +7,6 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
-local StarterGui = game:GetService("StarterGui")
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
 
 local function fetch(url)
     local ok, body = pcall(function() return game:HttpGet(url) end)
@@ -24,22 +21,24 @@ local Fluent = loadstring(fluentChunk)()
 if _G.TRSPanelLoaded then pcall(function() _G.TRSPanelLoaded:Destroy() end) end
 _G.TRSPanelLoaded = Instance.new("Folder")
 
-if not isfolder("TRS_Panel") then makefolder("TRS_Panel") end
-local CurrentLang = "EN"
-if isfile("TRS_Panel/Lang.txt") then
-    local read = readfile("TRS_Panel/Lang.txt")
-    if read ~= "" then CurrentLang = read end
-end
-
-local Translations = {
-    EN = { welcome = "Welcome, ", connected = "Connected", executor = "Executor: ", stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character", vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness", combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically", delay = "Delay (ms)", players = "Player Actions", tpClosest = "Teleport to Closest", esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker", revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant", revStatus = "Revenant Status", farm = "Scrap Farming", scan = "Rescan Scraps", tpScrap = "Go to Closest Scrap", autoFarm = "Auto Farm", teleport = "Teleport Locations", goTo = "Go to ", util = "Utilities", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK", hop = "Server Hop", settings = "Settings", lang = "Language (Reloads UI)", logs = "Server Logs", hourLog = "Hour Activations", roundLog = "Round Activations", worldLog = "World Events" },
-    MX = { welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ", stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje", vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad", combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente", delay = "Retardo (ms)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano", esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant", revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant", revStatus = "Estado del Revenant", farm = "Farmeo de Scraps", scan = "Reescanear Scraps", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear", teleport = "Puntos de Teletransporte", goTo = "Ir a ", util = "Utilidades", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK", hop = "Server Hop", settings = "Ajustes", lang = "Idioma (Recarga UI)", logs = "Registros del Servidor", hourLog = "Horas Activadas", roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo" }
+local L = {
+    welcome = "Welcome, ", connected = "Connected", executor = "Executor: ", stats = "Live Stats", 
+    abilities = "Player Abilities", reset = "Reset Character", vision = "Environment", 
+    fullbright = "Fullbright", fullDesc = "Removes fog and darkness", combat = "Combat System", 
+    autoClick = "Auto Clicker", clickDesc = "Activates tools automatically", delay = "Delay (ms)", 
+    players = "Player Actions", tpClosest = "Teleport to Closest", esp = "Player ESP", 
+    espDesc = "Highlights other players", revAct = "Revenant Tracker", revEsp = "Revenant ESP", 
+    revEspDesc = "Highlights the boss", tpRev = "Go to Revenant", revStatus = "Revenant Status", 
+    farm = "Scrap Farming", scan = "Rescan Scraps", tpScrap = "Go to Closest Scrap", 
+    autoFarm = "Auto Farm", teleport = "Teleport Locations", goTo = "Go to ", 
+    util = "Utilities", antiRag = "Anti Ragdoll", hop = "Server Hop", 
+    settings = "Settings", logs = "Server Logs", hourLog = "Hour Activations", 
+    roundLog = "Round Activations", worldLog = "World Events"
 }
-local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
-    SubTitle = "v27.0",
+    SubTitle = "v28.0 Stable",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -65,17 +64,7 @@ local UI = {}
 local function getHRP() local c = LocalPlayer.Character; return c and c:FindFirstChild("HumanoidRootPart") end
 local function getHumanoid() local c = LocalPlayer.Character; return c and c:FindFirstChildOfClass("Humanoid") end
 local function doTeleport(pos) local h = getHRP(); if h and pos then h.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)); return true end return false end
-
-local function notify(title, content) 
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = content,
-            Duration = 4
-        })
-    end)
-end
-
+local function notify(title, content) Fluent:Notify({ Title = title, Content = content, Duration = 4 }) end
 local function getExecutor() if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok then return name end end return "Unknown" end
 
 Tabs.Main:AddSection("Account Information")
@@ -361,21 +350,6 @@ task.spawn(function()
 end)
 
 Tabs.Settings:AddSection(L.settings)
-Tabs.Settings:AddDropdown("Language", {
-    Title = L.lang, Values = { "English", "Español" },
-    Default = (CurrentLang == "EN" and "English") or "Español", Multi = false,
-    Callback = function(v)
-        local newLang = (v == "English" and "EN") or "MX"
-        if newLang ~= CurrentLang then
-            if writefile then pcall(writefile, "TRS_Panel/Lang.txt", newLang) end
-            notify("System", "Reloading UI...")
-            task.wait(1)
-            if Fluent then Fluent:Destroy() end
-            _G.TRSPanelLoaded:Destroy()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/abehix/TRS-Hud/main/abejo.lua"))()
-        end
-    end
-})
 Tabs.Settings:AddButton({ Title = "Force Reload", Icon = "refresh-cw", Callback = function()
     if Fluent then Fluent:Destroy() end
     _G.TRSPanelLoaded:Destroy()
