@@ -1,16 +1,20 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local Lighting = game:GetService("Lighting")
 
 local function safeGet(url)
     local ok, res = pcall(function() return game:HttpGet(url) end)
-    if ok and res then return res else return nil end
+    if ok and res then return res end
+    return nil
 end
 
 local FluentSource = safeGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua")
-if not FluentSource then return warn("[TRS Panel] Error: No se pudo descargar Fluent.") end
+if not FluentSource then return warn("[TRS Panel] Error al cargar UI.") end
 
 local Fluent = loadstring(FluentSource)()
 local SaveManager = loadstring(safeGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -27,128 +31,10 @@ local function disconnectAll()
     Connections = setmetatable({}, { __mode = "k" })
 end
 
--- === SISTEMA DE TRADUCCIONES ===
 local Translations = {
-    EN = {
-        systemInfo = "System Information",
-        welcome = "Welcome, ",
-        executor = "Executor: ",
-        status = "Status: Loaded correctly.",
-        stats = "Live Statistics",
-        waiting = "Waiting for character...",
-        speed = "Speed: ",
-        health = "Health: ",
-        abilities = "Player Abilities",
-        infStamina = "Infinite Stamina",
-        infStaminaDesc = "Prevents fatigue when running or attacking.",
-        resetChar = "Reset Character",
-        resetCharDesc = "Forces immediate respawn.",
-        combat = "Combat Automation",
-        autoClick = "Auto Clicker",
-        autoClickDesc = "Automatically clicks and activates tools.",
-        delay = "Delay (ms)",
-        players = "Player Actions",
-        tpClosest = "Teleport to Closest Player",
-        tpClosestDesc = "Teleports you to the nearest player.",
-        farm = "Farming System",
-        scanScraps = "Scan Scraps",
-        scanScrapsDesc = "Highlights scraps on the map.",
-        tpScrap = "Go to Closest Scrap",
-        tpScrapDesc = "Teleports to the nearest scanned scrap.",
-        autoFarm = "Auto Farm",
-        autoFarmDesc = "Automatically teleports to the closest scrap.",
-        revenant = "Revenant Actions",
-        tpRev = "Go to Revenant",
-        tpRevDesc = "Teleports to the Revenant NPC.",
-        teleport = "Points of Interest",
-        goTo = "Go to ",
-        utilities = "Server Bypasses",
-        antiRagdoll = "Anti Ragdoll",
-        antiRagdollDesc = "Prevents your character from falling.",
-        settings = "Settings",
-        language = "Language / Idioma",
-        langDesc = "Select your preferred language."
-    },
-    MX = {
-        systemInfo = "Información del Sistema",
-        welcome = "Bienvenido, ",
-        executor = "Executor: ",
-        status = "Estado: Cargado correctamente.",
-        stats = "Estadísticas en Vivo",
-        waiting = "Esperando personaje...",
-        speed = "Velocidad: ",
-        health = "Salud: ",
-        abilities = "Habilidades del Jugador",
-        infStamina = "Stamina Infinita",
-        infStaminaDesc = "Evita el cansancio al correr o atacar.",
-        resetChar = "Reiniciar Personaje",
-        resetCharDesc = "Fuerza tu respawn inmediato.",
-        combat = "Automatización de Combate",
-        autoClick = "Auto Clicker",
-        autoClickDesc = "Clic automático y activación de herramientas.",
-        delay = "Retardo (ms)",
-        players = "Acciones de Jugadores",
-        tpClosest = "Ir al Jugador Más Cercano",
-        tpClosestDesc = "Teletranspórtate al jugador más cercano.",
-        farm = "Sistema de Farmeo",
-        scanScraps = "Escanear Scraps",
-        scanScrapsDesc = "Resalta los scraps en el mapa.",
-        tpScrap = "Ir al Scrap Más Cercano",
-        tpScrapDesc = "Teletranspórtate al scrap escaneado más cercano.",
-        autoFarm = "Auto Farm",
-        autoFarmDesc = "Teletransporte automático al scrap más cercano.",
-        revenant = "Acciones del Revenant",
-        tpRev = "Ir al Revenant",
-        tpRevDesc = "Teletranspórtate hacia el NPC Revenant.",
-        teleport = "Puntos de Interés",
-        goTo = "Ir a ",
-        utilities = "Bypasses del Servidor",
-        antiRagdoll = "Anti Ragdoll",
-        antiRagdollDesc = "Evita que tu personaje se caiga o quede tirado.",
-        settings = "Ajustes",
-        language = "Language / Idioma",
-        langDesc = "Selecciona tu idioma preferido."
-    },
-    ES = {
-        systemInfo = "Información del Sistema",
-        welcome = "Bienvenido, ",
-        executor = "Executor: ",
-        status = "Estado: Cargado correctamente.",
-        stats = "Estadísticas en Directo",
-        waiting = "Esperando personaje...",
-        speed = "Velocidad: ",
-        health = "Salud: ",
-        abilities = "Habilidades del Jugador",
-        infStamina = "Estamina Infinita",
-        infStaminaDesc = "Evita el cansancio al correr o atacar.",
-        resetChar = "Reiniciar Personaje",
-        resetCharDesc = "Fuerza tu reaparición inmediata.",
-        combat = "Automatización de Combate",
-        autoClick = "Auto Clicker",
-        autoClickDesc = "Clic automático y activación de herramientas.",
-        delay = "Retardo (ms)",
-        players = "Acciones de Jugadores",
-        tpClosest = "Ir al Jugador Más Cercano",
-        tpClosestDesc = "Teletranspórtate al jugador más cercano.",
-        farm = "Sistema de Farmeo",
-        scanScraps = "Escanear Scraps",
-        scanScrapsDesc = "Resalta los scraps en el mapa.",
-        tpScrap = "Ir al Scrap Más Cercano",
-        tpScrapDesc = "Teletranspórtate al scrap escaneado más cercano.",
-        autoFarm = "Auto Farm",
-        autoFarmDesc = "Teletransporte automático al scrap más cercano.",
-        revenant = "Acciones del Revenant",
-        tpRev = "Ir al Revenant",
-        tpRevDesc = "Teletranspórtate hacia el NPC Revenant.",
-        teleport = "Puntos de Interés",
-        goTo = "Ir a ",
-        utilities = "Bypasses del Servidor",
-        antiRagdoll = "Anti Ragdoll",
-        antiRagdollDesc = "Evita que tu personaje se caiga o quede tirado.",
-        settings = "Ajustes",
-        language = "Language / Idioma",
-        langDesc = "Selecciona tu idioma preferido."
-    }
+    EN = { welcome = "Welcome, ", executor = "Executor: ", status = "System Online", stats = "Live Stats", abilities = "Player Abilities", infStamina = "Infinite Stamina", speed = "Speed (WalkSpeed)", jump = "Jump Power", reset = "Reset Character", vision = "Vision / Environment", fullbright = "Fullbright (No Fog)", combat = "Combat Automation", autoClick = "Auto Clicker", clickDesc = "Clicks and activates tools automatically.", players = "Player Actions", tpClosest = "Teleport to Closest Player", esp = "Player ESP (Highlight)", farm = "Farming System", scanScraps = "Scan Scraps", scanDesc = "Highlights scrap models.", tpScrap = "Go to Closest Scrap", autoFarm = "Auto Farm Scraps", autoPrompt = "Auto Interact Prompts", revenant = "Revenant Actions", tpRev = "Go to Revenant", teleport = "Locations", goTo = "Go to ", utilities = "Bypasses", antiRagdoll = "Anti Ragdoll", settings = "Settings", language = "Language", settingsUI = "Interface Settings" },
+    MX = { welcome = "Bienvenido, ", executor = "Executor: ", status = "Sistema en Línea", stats = "Estadísticas", abilities = "Habilidades", infStamina = "Stamina Infinita", speed = "Velocidad (WalkSpeed)", jump = "Fuerza de Salto", reset = "Reiniciar Personaje", vision = "Visión / Entorno", fullbright = "Fullbright (Sin Niebla)", combat = "Automatización de Combate", autoClick = "Auto Clicker", clickDesc = "Hace clic y activa herramientas automáticamente.", players = "Acciones de Jugadores", tpClosest = "Ir al Jugador Más Cercano", esp = "ESP de Jugadores (Resaltar)", farm = "Sistema de Farmeo", scanScraps = "Escanear Scraps", scanDesc = "Resalta los scraps en el mapa.", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear Scraps", autoPrompt = "Auto Interactuar Objetos", revenant = "Acciones del Revenant", tpRev = "Ir al Revenant", teleport = "Ubicaciones", goTo = "Ir a ", utilities = "Bypasses", antiRagdoll = "Anti Ragdoll", settings = "Ajustes", language = "Idioma", settingsUI = "Ajustes de Interfaz" },
+    ES = { welcome = "Bienvenido, ", executor = "Executor: ", status = "Sistema en Línea", stats = "Estadísticas", abilities = "Habilidades", infStamina = "Estamina Infinita", speed = "Velocidad (WalkSpeed)", jump = "Fuerza de Salto", reset = "Reiniciar Personaje", vision = "Visión / Entorno", fullbright = "Fullbright (Sin Niebla)", combat = "Automatización de Combate", autoClick = "Auto Clicker", clickDesc = "Hace clic y activa herramientas automáticamente.", players = "Acciones de Jugadores", tpClosest = "Ir al Jugador Más Cercano", esp = "ESP de Jugadores (Resaltar)", farm = "Sistema de Farmeo", scanScraps = "Escanear Scraps", scanDesc = "Resalta los scraps en el mapa.", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear Scraps", autoPrompt = "Auto Interactuar Objetos", revenant = "Acciones del Revenant", tpRev = "Ir al Revenant", teleport = "Ubicaciones", goTo = "Ir a ", utilities = "Bypasses", antiRagdoll = "Anti Ragdoll", settings = "Ajustes", language = "Idioma", settingsUI = "Ajustes de Interfaz" }
 }
 
 local CurrentLang = "MX"
@@ -156,9 +42,9 @@ local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "TRS Panel",
-    SubTitle = "v11.0 Professional",
+    SubTitle = "v12.0 Elite",
     TabWidth = 160,
-    Size = UDim2.fromOffset(600, 480),
+    Size = UDim2.fromOffset(620, 500),
     Acrylic = false,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -176,7 +62,7 @@ local Tabs = {
 }
 
 local Options = Fluent.Options
-local UI_Elements = {}
+local UI = {}
 
 local function getHRP()
     local char = LocalPlayer.Character
@@ -197,55 +83,91 @@ local function doTeleport(pos)
     return false
 end
 
-local function notify(title, content, duration)
-    Fluent:Notify({ Title = title, Content = content, Duration = duration or 3 })
+local function notify(title, content)
+    Fluent:Notify({ Title = title, Content = content, Duration = 3 })
 end
 
--- === UI: DASHBOARD ===
-UI_Elements.MainSec1 = Tabs.Main:AddSection(L.systemInfo)
-UI_Elements.MainPara = Tabs.Main:AddParagraph({
-    Title = L.welcome .. LocalPlayer.Name,
-    Content = L.executor .. (identifyexecutor and identifyexecutor() or "Unknown") .. "\n" .. L.status
-})
+UI.MainPara = Tabs.Main:AddParagraph({ Title = L.welcome .. LocalPlayer.Name, Content = L.status })
+UI.abilities = Tabs.Main:AddSection(L.abilities)
 
-UI_Elements.MainSec2 = Tabs.Main:AddSection(L.abilities)
-UI_Elements.StaminaToggle = Tabs.Main:AddToggle("StaminaInf", {
+UI.stamina = Tabs.Main:AddToggle("StaminaInf", {
     Title = L.infStamina,
-    Description = L.infStaminaDesc,
     Default = false,
-    Callback = function(state) notify("Habilidades", L.infStamina .. ": " .. (state and "ON" or "OFF")) end
+    Callback = function(s) notify("Ability", L.infStamina .. ": " .. (s and "ON" or "OFF")) end
 })
 
-UI_Elements.ResetBtn = Tabs.Main:AddButton({
-    Title = L.resetChar,
-    Description = L.resetCharDesc,
+UI.speed = Tabs.Main:AddSlider("WalkSpeed", {
+    Title = L.speed,
+    Default = 16, Min = 16, Max = 150, Rounding = 0,
+    Callback = function(v)
+        local hum = getHumanoid()
+        if hum then hum.WalkSpeed = v end
+    end
+})
+
+UI.jump = Tabs.Main:AddSlider("JumpPower", {
+    Title = L.jump,
+    Default = 50, Min = 50, Max = 200, Rounding = 0,
+    Callback = function(v)
+        local hum = getHumanoid()
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = v
+        end
+    end
+})
+
+UI.reset = Tabs.Main:AddButton({
+    Title = L.reset,
     Callback = function()
         local hum = getHumanoid()
         if hum then hum.Health = 0 end
     end
 })
 
--- === UI: COMBAT ===
-local _autoClick = false
-local _clickDelay = 0.1
-UI_Elements.CombatSec = Tabs.Combat:AddSection(L.combat)
-UI_Elements.AutoClickToggle = Tabs.Combat:AddToggle("AutoClicker", {
-    Title = L.autoClick,
-    Description = L.autoClickDesc,
+UI.vision = Tabs.Main:AddSection(L.vision)
+UI.fullbright = Tabs.Main:AddToggle("Fullbright", {
+    Title = L.fullbright,
     Default = false,
-    Callback = function(state) _autoClick = state end
-})
-UI_Elements.ClickDelay = Tabs.Combat:AddSlider("ClickDelay", {
-    Title = L.delay,
-    Default = 100, Min = 10, Max = 1000, Rounding = 0,
-    Callback = function(value) _clickDelay = value / 1000 end
+    Callback = function(s)
+        if s then
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+            Lighting.FogEnd = 100000
+        else
+            Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+            Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+            Lighting.FogEnd = 1000
+        end
+    end
 })
 
--- === UI: PLAYERS ===
-UI_Elements.PlrSec = Tabs.Players:AddSection(L.players)
-UI_Elements.TpClosestBtn = Tabs.Players:AddButton({
+UI.combat = Tabs.Combat:AddSection(L.combat)
+local _autoClick = false
+local _clickDelay = 0.1
+
+UI.autoClick = Tabs.Combat:AddToggle("AutoClicker", {
+    Title = L.autoClick,
+    Description = L.clickDesc,
+    Default = false,
+    Callback = function(s) _autoClick = s end
+})
+
+UI.clickDelay = Tabs.Combat:AddSlider("ClickDelay", {
+    Title = "Delay (ms)",
+    Default = 100, Min = 10, Max = 1000, Rounding = 0,
+    Callback = function(v) _clickDelay = v / 1000 end
+})
+
+UI.players = Tabs.Players:AddSection(L.players)
+UI.espToggle = Tabs.Players:AddToggle("PlayerESP", {
+    Title = L.esp,
+    Default = false,
+    Callback = function(s) notify("ESP", L.esp .. ": " .. (s and "ON" or "OFF")) end
+})
+
+UI.tpClosest = Tabs.Players:AddButton({
     Title = L.tpClosest,
-    Description = L.tpClosestDesc,
     Callback = function()
         local myHRP = getHRP()
         if not myHRP then return end
@@ -263,14 +185,13 @@ UI_Elements.TpClosestBtn = Tabs.Players:AddButton({
     end
 })
 
--- === UI: FARM ===
 local ScrapHighlights = {}
+local PlayerESP = {}
 local _autoFarmScraps = false
+local _autoPrompt = false
 
 local function clearHighlights()
-    for scrap, hl in pairs(ScrapHighlights) do
-        if hl and hl.Parent then hl:Destroy() end
-    end
+    for scrap, hl in pairs(ScrapHighlights) do if hl and hl.Parent then hl:Destroy() end end
     table.clear(ScrapHighlights)
 end
 
@@ -278,7 +199,7 @@ local function scanScraps()
     clearHighlights()
     local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
     local folder = map and map:FindFirstChild("Scraps")
-    if not folder then return notify("Farm", "Scraps not found", 4) end
+    if not folder then return notify("Farm", "Scraps not found.") end
     local count = 0
     for _, desc in ipairs(folder:GetDescendants()) do
         if desc:IsA("Model") and (desc.Name == "Scrap" or desc.Name:match("^Scrap")) then
@@ -296,19 +217,13 @@ local function scanScraps()
             end
         end
     end
-    notify("Farm", "Found " .. count .. " scraps.", 3)
+    notify("Farm", "Found " .. count .. " scraps.")
 end
 
-UI_Elements.FarmSec = Tabs.Farm:AddSection(L.farm)
-UI_Elements.ScanBtn = Tabs.Farm:AddButton({
-    Title = L.scanScraps,
-    Description = L.scanScrapsDesc,
-    Callback = function() scanScraps() end
-})
-
-UI_Elements.TpScrapBtn = Tabs.Farm:AddButton({
+UI.farm = Tabs.Farm:AddSection(L.farm)
+UI.scan = Tabs.Farm:AddButton({ Title = L.scanScraps, Description = L.scanDesc, Callback = scanScraps })
+UI.tpScrap = Tabs.Farm:AddButton({
     Title = L.tpScrap,
-    Description = L.tpScrapDesc,
     Callback = function()
         local myHRP = getHRP()
         if not myHRP then return end
@@ -329,18 +244,21 @@ UI_Elements.TpScrapBtn = Tabs.Farm:AddButton({
     end
 })
 
-UI_Elements.AutoFarmToggle = Tabs.Farm:AddToggle("AutoFarm", {
+UI.autoFarm = Tabs.Farm:AddToggle("AutoFarm", {
     Title = L.autoFarm,
-    Description = L.autoFarmDesc,
     Default = false,
-    Callback = function(state) _autoFarmScraps = state end
+    Callback = function(s) _autoFarmScraps = s end
 })
 
--- === UI: REVENANT ===
-UI_Elements.RevSec = Tabs.Revenant:AddSection(L.revenant)
-UI_Elements.TpRevBtn = Tabs.Revenant:AddButton({
+UI.autoPrompt = Tabs.Farm:AddToggle("AutoPrompt", {
+    Title = L.autoPrompt,
+    Default = false,
+    Callback = function(s) _autoPrompt = s end
+})
+
+UI.rev = Tabs.Revenant:AddSection(L.revenant)
+UI.tpRev = Tabs.Revenant:AddButton({
     Title = L.tpRev,
-    Description = L.tpRevDesc,
     Callback = function()
         local npcs = Workspace:FindFirstChild("NPCs")
         local rev = npcs and npcs:FindFirstChild("Revenant")
@@ -349,9 +267,8 @@ UI_Elements.TpRevBtn = Tabs.Revenant:AddButton({
     end
 })
 
--- === UI: TELEPORT ===
-UI_Elements.TpSec = Tabs.Teleport:AddSection(L.teleport)
-local locations = {
+UI.tpSec = Tabs.Teleport:AddSection(L.teleport)
+local locs = {
     ["Shop"] = Vector3.new(-287, -13, -454),
     ["Power Station"] = Vector3.new(-244, 21, 212),
     ["Scrap Building"] = Vector3.new(-458, -3, 23),
@@ -361,87 +278,68 @@ local locations = {
     ["Cave"] = Vector3.new(110, 14, -209)
 }
 
-UI_Elements.LocationBtns = {}
-for name, pos in pairs(locations) do
-    UI_Elements.LocationBtns[name] = Tabs.Teleport:AddButton({
+UI.locs = {}
+for name, pos in pairs(locs) do
+    UI.locs[name] = Tabs.Teleport:AddButton({
         Title = L.goTo .. name,
         Callback = function() doTeleport(pos) end
     })
 end
 
--- === UI: UTILITIES ===
-UI_Elements.UtilSec = Tabs.Utilities:AddSection(L.utilities)
-UI_Elements.AntiRagdollToggle = Tabs.Utilities:AddToggle("AntiRagdoll", {
+UI.util = Tabs.Utilities:AddSection(L.utilities)
+UI.antiRag = Tabs.Utilities:AddToggle("AntiRagdoll", {
     Title = L.antiRagdoll,
-    Description = L.antiRagdollDesc,
     Default = true,
-    Callback = function(state) notify("Utility", L.antiRagdoll .. ": " .. (state and "ON" or "OFF")) end
+    Callback = function(s) notify("Bypass", L.antiRagdoll .. ": " .. (s and "ON" or "OFF")) end
 })
 
--- === UI: SETTINGS (Language) ===
-UI_Elements.SetSec = Tabs.Settings:AddSection(L.settings)
-UI_Elements.LangDropdown = Tabs.Settings:AddDropdown("Language", {
+UI.settings = Tabs.Settings:AddSection(L.settings)
+UI.lang = Tabs.Settings:AddDropdown("Language", {
     Title = L.language,
-    Description = L.langDesc,
-    Values = { "English", "Español (Latinoamérica)", "Español (España)" },
+    Values = { "Español (Latinoamérica)", "English", "Español (España)" },
     Default = "Español (Latinoamérica)",
     Multi = false,
-    Callback = function(value)
-        if value == "English" then CurrentLang = "EN"
-        elseif value == "Español (Latinoamérica)" then CurrentLang = "MX"
-        elseif value == "Español (España)" then CurrentLang = "ES" end
+    Callback = function(v)
+        if v == "English" then CurrentLang = "EN"
+        elseif v == "Español (Latinoamérica)" then CurrentLang = "MX"
+        elseif v == "Español (España)" then CurrentLang = "ES" end
         L = Translations[CurrentLang]
         UpdateLanguage()
     end
 })
 
--- FUNCIÓN QUE ACTUALIZA TODOS LOS TEXTOS
 function UpdateLanguage()
-    UI_Elements.MainSec1.Title = L.systemInfo
-    UI_Elements.MainPara.Title = L.welcome .. LocalPlayer.Name
-    UI_Elements.MainPara:SetDesc(L.executor .. (identifyexecutor and identifyexecutor() or "Unknown") .. "\n" .. L.status)
-    UI_Elements.MainSec2.Title = L.abilities
-    UI_Elements.StaminaToggle:SetTitle(L.infStamina)
-    UI_Elements.StaminaToggle:SetDesc(L.infStaminaDesc)
-    UI_Elements.ResetBtn:SetTitle(L.resetChar)
-    UI_Elements.ResetBtn:SetDesc(L.resetCharDesc)
-
-    UI_Elements.CombatSec.Title = L.combat
-    UI_Elements.AutoClickToggle:SetTitle(L.autoClick)
-    UI_Elements.AutoClickToggle:SetDesc(L.autoClickDesc)
-    UI_Elements.ClickDelay:SetTitle(L.delay)
-
-    UI_Elements.PlrSec.Title = L.players
-    UI_Elements.TpClosestBtn:SetTitle(L.tpClosest)
-    UI_Elements.TpClosestBtn:SetDesc(L.tpClosestDesc)
-
-    UI_Elements.FarmSec.Title = L.farm
-    UI_Elements.ScanBtn:SetTitle(L.scanScraps)
-    UI_Elements.ScanBtn:SetDesc(L.scanScrapsDesc)
-    UI_Elements.TpScrapBtn:SetTitle(L.tpScrap)
-    UI_Elements.TpScrapBtn:SetDesc(L.tpScrapDesc)
-    UI_Elements.AutoFarmToggle:SetTitle(L.autoFarm)
-    UI_Elements.AutoFarmToggle:SetDesc(L.autoFarmDesc)
-
-    UI_Elements.RevSec.Title = L.revenant
-    UI_Elements.TpRevBtn:SetTitle(L.tpRev)
-    UI_Elements.TpRevBtn:SetDesc(L.tpRevDesc)
-
-    UI_Elements.TpSec.Title = L.teleport
-    for name, btn in pairs(UI_Elements.LocationBtns) do
-        btn:SetTitle(L.goTo .. name)
-    end
-
-    UI_Elements.UtilSec.Title = L.utilities
-    UI_Elements.AntiRagdollToggle:SetTitle(L.antiRagdoll)
-    UI_Elements.AntiRagdollToggle:SetDesc(L.antiRagdollDesc)
-
-    UI_Elements.SetSec.Title = L.settings
-    UI_Elements.LangDropdown:SetTitle(L.language)
-    UI_Elements.LangDropdown:SetDesc(L.langDesc)
+    UI.MainPara.Title = L.welcome .. LocalPlayer.Name
+    UI.MainPara:SetDesc(L.status)
+    UI.abilities.Title = L.abilities
+    UI.stamina:SetTitle(L.infStamina)
+    UI.speed:SetTitle(L.speed)
+    UI.jump:SetTitle(L.jump)
+    UI.reset:SetTitle(L.reset)
+    UI.vision.Title = L.vision
+    UI.fullbright:SetTitle(L.fullbright)
+    UI.combat.Title = L.combat
+    UI.autoClick:SetTitle(L.autoClick)
+    UI.autoClick:SetDesc(L.clickDesc)
+    UI.players.Title = L.players
+    UI.espToggle:SetTitle(L.esp)
+    UI.tpClosest:SetTitle(L.tpClosest)
+    UI.farm.Title = L.farm
+    UI.scan:SetTitle(L.scanScraps)
+    UI.scan:SetDesc(L.scanDesc)
+    UI.tpScrap:SetTitle(L.tpScrap)
+    UI.autoFarm:SetTitle(L.autoFarm)
+    UI.autoPrompt:SetTitle(L.autoPrompt)
+    UI.rev.Title = L.revenant
+    UI.tpRev:SetTitle(L.tpRev)
+    UI.tpSec.Title = L.teleport
+    for name, btn in pairs(UI.locs) do btn:SetTitle(L.goTo .. name) end
+    UI.util.Title = L.utilities
+    UI.antiRag:SetTitle(L.antiRagdoll)
+    UI.settings.Title = L.settings
+    UI.lang:SetTitle(L.language)
 end
 
--- LOOPS (Background Tasks)
 task.spawn(function()
     local hooked = false
     while task.wait(1) do
@@ -504,6 +402,59 @@ task.spawn(function()
 end)
 
 task.spawn(function()
+    while task.wait(0.1) do
+        if _autoPrompt then
+            local myHRP = getHRP()
+            if myHRP then
+                for _, desc in ipairs(Workspace:GetDescendants()) do
+                    if desc:IsA("ProximityPrompt") and desc.Enabled then
+                        local parent = desc.Parent
+                        local pos
+                        if parent:IsA("BasePart") then pos = parent.Position
+                        elseif parent:IsA("Model") then
+                            local p = parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart")
+                            if p then pos = p.Position end
+                        end
+                        if pos and (pos - myHRP.Position).Magnitude <= (desc.MaxActivationDistance + 5) then
+                            pcall(function()
+                                desc.HoldDuration = 0
+                                if fireproximityprompt then fireproximityprompt(desc) else desc:InputHoldBegin(); task.wait(); desc:InputHoldEnd() end
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        local espOn = Options.PlayerESP and Options.PlayerESP.Value
+        if espOn then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    if not PlayerESP[plr] or not PlayerESP[plr].Parent then
+                        local hl = Instance.new("Highlight")
+                        hl.FillColor = Color3.fromRGB(255, 0, 0)
+                        hl.FillTransparency = 0.5
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.Adornee = plr.Character
+                        hl.Parent = plr.Character
+                        PlayerESP[plr] = hl
+                    end
+                end
+            end
+        else
+            for plr, hl in pairs(PlayerESP) do
+                if hl and hl.Parent then hl:Destroy() end
+                PlayerESP[plr] = nil
+            end
+        end
+    end
+end)
+
+task.spawn(function()
     while task.wait(0.5) do
         if Options.AntiRagdoll.Value and LocalPlayer.Character then
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -517,23 +468,6 @@ task.spawn(function()
     end
 end)
 
-local StatsParagraph = Tabs.Main:AddParagraph({ Title = L.stats, Content = L.waiting })
-task.spawn(function()
-    while task.wait(1) do
-        local hum = getHumanoid()
-        local hrp = getHRP()
-        if hum and hrp then
-            local vel = hrp.AssemblyLinearVelocity
-            local spd = math.floor(Vector3.new(vel.X, 0, vel.Z).Magnitude)
-            local hp = math.floor(hum.Health)
-            local maxhp = math.floor(hum.MaxHealth)
-            StatsParagraph:SetDesc(string.format("%s%d | %s%d/%d", L.speed, spd, L.health, hp, maxhp))
-        else
-            StatsParagraph:SetDesc(L.waiting)
-        end
-    end
-end)
-
 if SaveManager and InterfaceManager then
     SaveManager:SetLibrary(Fluent)
     InterfaceManager:SetLibrary(Fluent)
@@ -543,9 +477,21 @@ if SaveManager and InterfaceManager then
     SaveManager:BuildConfigSection(Tabs.Settings)
 end
 
-task.wait(0.5)
+task.wait(0.1)
 Window:SelectTab(1)
-notify("TRS Panel", "Loaded / Cargado", 3)
+notify("TRS Panel", "Sistema Cargado.")
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    if Options.WalkSpeed then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = Options.WalkSpeed.Value
+            hum.UseJumpPower = true
+            hum.JumpPower = Options.JumpPower.Value
+        end
+    end
+end)
 
 LocalPlayer.CharacterRemoving:Connect(function()
     clearHighlights()
@@ -555,4 +501,5 @@ end)
 script.Destroying:Connect(function()
     disconnectAll()
     clearHighlights()
+    for _, hl in pairs(PlayerESP) do if hl and hl.Parent then hl:Destroy() end end
 end)
