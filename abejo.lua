@@ -3,13 +3,26 @@ local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+local function safeGet(url)
+    local ok, res = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if ok and res then
+        return res
+    else
+        return nil
+    end
+end
+
+local FluentSource = safeGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua")
+if not FluentSource then
+    return warn("[TRS Panel] Error: No se pudo descargar Fluent. Revisa tu conexión o el Executor.")
+end
+
+local Fluent = loadstring(FluentSource)()
+local SaveManager = loadstring(safeGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(safeGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Connections = setmetatable({}, { __mode = "k" })
 local function track(conn)
@@ -25,39 +38,21 @@ local function disconnectAll()
 end
 
 local function getExecutor()
-    local execs = {
-        { "Synapse X", syn }, { "Script-Ware", is_sirhurt_closure }, { "Krunker", KRNL_LOADED },
-        { "Fluxus", fluxus }, { "Electron", electron }, { "Wave", wave }, { "Delta", delta },
-        { "AWP", AWP }, { "Solara", Solara }, { "Xeno", xeno }, { "Codex", codex }
-    }
-    for _, exec in ipairs(execs) do
-        if exec[2] then return exec[1] end
-    end
     if identifyexecutor then
         local ok, name = pcall(identifyexecutor)
         if ok and name then return name end
     end
-    return "Unknown / Mobile"
+    return "Executor Desconocido"
 end
 
 local Window = Fluent:CreateWindow({
     Title = "TRS Panel",
-    SubTitle = "v10.0 Professional",
+    SubTitle = "v10.5 Professional",
     TabWidth = 160,
     Size = UDim2.fromOffset(600, 480),
     Acrylic = false,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl,
-    KeySystem = true,
-    KeySettings = {
-        Title = "Cargando TRS Panel...",
-        Subtitle = "Iniciando preferencias y módulos",
-        Note = "Bypass automático en 1.5 segundos...",
-        FileName = "TRS_Key",
-        SaveKey = false,
-        GrabKeyFromSite = false,
-        Key = { "AUTO_BYPASS" }
-    }
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
@@ -100,33 +95,32 @@ local function notify(title, content, duration)
     })
 end
 
--- DASHBOARD
 Tabs.Main:AddSection("Información del Sistema")
 Tabs.Main:AddParagraph({
     Title = "Bienvenido, " .. LocalPlayer.Name,
-    Content = "Executor Detectado: " .. getExecutor() .. "\nEstado: Conectado y Protegido."
+    Content = "Executor: " .. getExecutor() .. "\nEstado: Cargado correctamente."
 })
 
 local StatsParagraph = Tabs.Main:AddParagraph({
-    Title = "Estadísticas en Vivo",
-    Content = "Cargando..."
+    Title = "Estadísticas",
+    Content = "Esperando datos..."
 })
 
-Tabs.Main:AddSection("Habilidades del Jugador")
+Tabs.Main:AddSection("Habilidades")
 Tabs.Main:AddToggle("StaminaInf", {
     Title = "Stamina Infinita",
-    Description = "Evita el cansancio al correr o atacar.",
+    Description = "Evita el cansancio al correr.",
     Default = false,
     Callback = function(state)
-        notify("Habilidades", "Stamina Infinita: " .. (state and "ON" or "OFF"))
+        notify("Habilidades", "Stamina: " .. (state and "ON" or "OFF"))
     end
 })
 
 task.spawn(function()
     local hooked = false
-    while task.wait(2) do
+    while task.wait(1) do
         if Options.StaminaInf.Value and not hooked then
-            local ok, err = pcall(function()
+            pcall(function()
                 for _, obj in pairs(getgc(true)) do
                     if type(obj) == "function" then
                         local info = debug.getinfo(obj)
@@ -138,28 +132,27 @@ task.spawn(function()
                     end
                 end
             end)
-            if ok then hooked = true end
+            hooked = true
         end
     end
 end)
 
 Tabs.Main:AddButton({
     Title = "Reiniciar Personaje",
-    Description = "Fuerza tu respawn inmediato.",
+    Description = "Respawn rápido.",
     Callback = function()
         local hum = getHumanoid()
         if hum then hum.Health = 0 end
     end
 })
 
--- COMBAT
-Tabs.Combat:AddSection("Automatización de Combate")
+Tabs.Combat:AddSection("Combate")
 local _autoClick = false
 local _clickDelay = 0.1
 
 Tabs.Combat:AddToggle("AutoClicker", {
     Title = "Auto Clicker",
-    Description = "Clic automático y activación de herramientas.",
+    Description = "Clic automático al centro de la pantalla.",
     Default = false,
     Callback = function(state) _autoClick = state end
 })
@@ -194,11 +187,10 @@ task.spawn(function()
     end
 end)
 
--- PLAYERS
-Tabs.Players:AddSection("Acciones de Jugadores")
+Tabs.Players:AddSection("Jugadores")
 Tabs.Players:AddButton({
     Title = "Ir al Jugador Más Cercano",
-    Description = "Teletranspórtate al jugador más cercano a ti.",
+    Description = "Teletranspórtate al jugador más cercano.",
     Callback = function()
         local myHRP = getHRP()
         if not myHRP then return end
@@ -208,10 +200,7 @@ Tabs.Players:AddButton({
                 local target = plr.Character:FindFirstChild("HumanoidRootPart")
                 if target then
                     local d = (target.Position - myHRP.Position).Magnitude
-                    if d < dist then
-                        dist = d
-                        closest = target
-                    end
+                    if d < dist then dist = d; closest = target end
                 end
             end
         end
@@ -219,8 +208,7 @@ Tabs.Players:AddButton({
     end
 })
 
--- FARM (Arreglado)
-Tabs.Farm:AddSection("Sistema de Farmeo")
+Tabs.Farm:AddSection("Scraps")
 local ScrapHighlights = {}
 local _autoFarmScraps = false
 
@@ -256,7 +244,7 @@ local function scanScraps()
             end
         end
     end
-    notify("Farm", "Se encontraron " .. count .. " scraps.", 3)
+    notify("Farm", "Se detectaron " .. count .. " scraps.", 3)
 end
 
 Tabs.Farm:AddButton({
@@ -267,7 +255,7 @@ Tabs.Farm:AddButton({
 
 Tabs.Farm:AddButton({
     Title = "Ir al Scrap Más Cercano",
-    Description = "Teletranspórtate al scrap más cercano escaneado.",
+    Description = "Teletransporte al scrap escaneado más cercano.",
     Callback = function()
         local myHRP = getHRP()
         if not myHRP then return end
@@ -299,7 +287,7 @@ Tabs.Farm:AddToggle("AutoFarm", {
 })
 
 task.spawn(function()
-    while task.wait(1.5) do
+    while task.wait(1) do
         if _autoFarmScraps then
             local myHRP = getHRP()
             if myHRP then
@@ -322,26 +310,24 @@ task.spawn(function()
     end
 end)
 
--- REVENANT
-Tabs.Revenant:AddSection("Acciones del Revenant")
+Tabs.Revenant:AddSection("Acciones")
 Tabs.Revenant:AddButton({
     Title = "Ir al Revenant",
-    Description = "Teletranspórtate hacia el NPC Revenant.",
+    Description = "Teletranspórtate al NPC.",
     Callback = function()
         local npcs = Workspace:FindFirstChild("NPCs")
         local rev = npcs and npcs:FindFirstChild("Revenant")
         local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
         if hrp then
             doTeleport(hrp.Position)
-            notify("Revenant", "Viajando al NPC...", 2)
+            notify("Revenant", "Viajando...", 2)
         else
-            notify("Revenant", "No se encontró al Revenant.", 3)
+            notify("Revenant", "No se encontró.", 3)
         end
     end
 })
 
--- TELEPORT
-Tabs.Teleport:AddSection("Puntos de Interés")
+Tabs.Teleport:AddSection("Ubicaciones")
 local locations = {
     ["Shop"] = Vector3.new(-287, -13, -454),
     ["Power Station"] = Vector3.new(-244, 21, 212),
@@ -363,11 +349,10 @@ for name, pos in pairs(locations) do
     })
 end
 
--- UTILITIES (El tab que faltaba)
-Tabs.Utilities:AddSection("Bypasses del Servidor")
+Tabs.Utilities:AddSection("Bypasses")
 Tabs.Utilities:AddToggle("AntiRagdoll", {
     Title = "Anti Ragdoll",
-    Description = "Evita que tu personaje se caiga o quede tirado.",
+    Description = "Evita que tu personaje caiga.",
     Default = true,
     Callback = function(state)
         notify("Utility", "Anti Ragdoll: " .. (state and "ON" or "OFF"))
@@ -382,30 +367,25 @@ task.spawn(function()
                 pcall(function()
                     hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
                     hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
                 end)
             end
         end
     end
 end)
 
--- SETTINGS & SAVES
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("TRS_Panel")
-SaveManager:SetFolder("TRS_Panel/Configs")
+if SaveManager and InterfaceManager then
+    SaveManager:SetLibrary(Fluent)
+    InterfaceManager:SetLibrary(Fluent)
+    InterfaceManager:SetFolder("TRS_Panel")
+    SaveManager:SetFolder("TRS_Panel/Configs")
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+    SaveManager:BuildConfigSection(Tabs.Settings)
+end
 
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
--- AUTO-BYPASS PARA EL FAKE KEY SYSTEM
 task.spawn(function()
     task.wait(1)
-    if Options and Options.KeySystem then
-        Options.KeySystem.Value = "AUTO_BYPASS"
-    end
+    Window:SelectTab(1)
+    notify("TRS Panel", "Cargado correctamente.", 3)
 end)
 
 task.spawn(function()
