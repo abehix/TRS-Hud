@@ -208,70 +208,134 @@ task.spawn(function()
     end
 end)
 
-Tabs.Utilities:AddSection("Game Utilities")
+-- ==========================================
+-- ADVANCED FARM SYSTEM
+-- ==========================================
+Tabs.Farm:AddSection("Scrap Detection")
 
-local ScrapHighlights = {}
+local ScrapClasses = {} -- Stores { [ClassName] = { Color = Color3, Toggle = ToggleObject } }
+local ActiveScraps = {}  -- Stores { [ScrapModel] = { ClassName = string, Highlight = Highlight } }
 local _autoFarmScraps = false
+local _autoFarmTarget = "All"
 
-local function clearHighlights()
-    for _, hl in pairs(ScrapHighlights) do if hl then hl:Destroy() end end
-    table.clear(ScrapHighlights)
+local function GetRandomColor()
+    local colors = {
+        Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 0, 255),
+        Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 0, 255), Color3.fromRGB(0, 255, 255),
+        Color3.fromRGB(255, 128, 0), Color3.fromRGB(128, 0, 255), Color3.fromRGB(0, 128, 255)
+    }
+    return colors[math.random(1, #colors)]
 end
 
-local function scanScraps()
-    clearHighlights()
+local function ClearAllScraps()
+    for scrap, data in pairs(ActiveScraps) do
+        if data.Highlight then data.Highlight:Destroy() end
+    end
+    table.clear(ActiveScraps)
+    
+    if Options.ScrapClassDropdown then
+        Options.ScrapClassDropdown:SetValues({"All"})
+    end
+end
+
+local function ToggleScrapHighlight(className, state)
+    for scrap, data in pairs(ActiveScraps) do
+        if data.ClassName == className or className == "All" then
+            if state then
+                if not data.Highlight or not data.Highlight.Parent then
+                    local hl = Instance.new("Highlight")
+                    hl.FillColor = ScrapClasses[className] and ScrapClasses[className].Color or Color3.fromRGB(255, 170, 0)
+                    hl.FillTransparency = 0.4
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Adornee = scrap
+                    hl.Parent = scrap
+                    data.Highlight = hl
+                end
+            else
+                if data.Highlight then
+                    data.Highlight:Destroy()
+                    data.Highlight = nil
+                end
+            end
+        end
+    end
+end
+
+local function ScanScraps()
+    ClearAllScraps()
     local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
     local folder = map and map:FindFirstChild("Scraps")
-    if not folder then Notify.Error("Farm", "Scraps folder not found."); return 0 end
     
-    local count = 0
+    if not folder then Notify.Error("Farm", "Scraps folder not found."); return end
+    
+    local foundClasses = {}
+    
     for _, desc in ipairs(folder:GetDescendants()) do
         if desc:IsA("Model") and (desc.Name == "Scrap" or desc.Name:match("^Scrap")) then
             local primary = desc.PrimaryPart or desc:FindFirstChildWhichIsA("BasePart")
             if primary then
-                local hl = Instance.new("Highlight")
-                hl.FillColor = Color3.fromRGB(255, 170, 0)
-                hl.FillTransparency = 0.5
-                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                hl.Adornee = desc
-                hl.Parent = desc
-                ScrapHighlights[desc] = hl
-                count = count + 1
+                -- Determine Class Name (looks for attributes, values, or specific names)
+                local className = "Standard"
+                local typeValue = desc:FindFirstChild("Type") or desc:FindFirstChild("Class") or desc:FindFirstChild("ScrapType")
+                if typeValue and typeValue:IsA("StringValue") then
+                    className = typeValue.Value
+                elseif desc.Name ~= "Scrap" then
+                    className = desc.Name
+                end
+                
+                ActiveScraps[desc] = { ClassName = className, Highlight = nil }
+                foundClasses[className] = true
             end
         end
     end
-    if count > 0 then Notify.Success("Farm", "Detected " .. count .. " scraps.") else Notify.Warning("Farm", "No scraps found.") end
-    return count
+    
+    local classList = {"All"}
+    for className, _ in pairs(foundClasses) do
+        table.insert(classList, className)
+        
+        if not ScrapClasses[className] then
+            local col = GetRandomColor()
+            ScrapClasses[className] = { Color = col }
+            
+            -- Create specific toggle for this class
+            Tabs.Farm:AddToggle("HL_" .. className, {
+                Title = "Highlight: " .. className,
+                Default = true,
+                Callback = function(state)
+                    ToggleScrapHighlight(className, state)
+                end
+            })
+            -- Force initial state on scan
+            ToggleScrapHighlight(className, true)
+        end
+    end
+    
+    if Options.ScrapClassDropdown then
+        Options.ScrapClassDropdown:SetValues(classList)
+    end
+    
+    Notify.Success("Farm", "Scanned " .. #classList - 1 .. " scrap classes.")
 end
 
-Tabs.Farm:AddButton({
-    Title = "Scan Scraps",
-    Description = "Highlights all scraps on the map",
-    Callback = function() scanScraps() end
+if Options.ScrapClassDropdown then
+    Options.ScrapClassDropdown:SetValues({"All"})
+end
+
+local ClassDropdown = Tabs.Farm:AddDropdown("ScrapClassDropdown", {
+    Title = "Auto Farm Target Class",
+    Values = {"All"},
+    Multi = false,
+    Default = "All",
+    Callback = function(value)
+        _autoFarmTarget = value
+    end
 })
 
 Tabs.Farm:AddButton({
-    Title = "Teleport to Closest Scrap",
-    Callback = function()
-        local myHRP = getHRP()
-        if not myHRP then Notify.Error("Farm", "Character unavailable."); return end
-        local closest, dist = nil, math.huge
-        for scrap, _ in pairs(ScrapHighlights) do
-            if scrap.Parent then
-                local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
-                if primary then
-                    local d = (primary.Position - myHRP.Position).Magnitude
-                    if d < dist then dist = d; closest = scrap end
-                end
-            end
-        end
-        if closest then
-            local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart")
-            doTeleport(primary.Position)
-            Notify.Success("Farm", "Teleported to Scrap.")
-        else Notify.Warning("Farm", "No scanned scraps found.") end
-    end
+    Title = "Scan & Highlight Scraps",
+    Description = "Detects all scrap types and updates toggles",
+    Callback = function() ScanScraps() end
 })
 
 Tabs.Farm:AddToggle("AutoFarm", {
@@ -286,20 +350,22 @@ Tabs.Farm:AddToggle("AutoFarm", {
 task.spawn(function()
     while task.wait(1) do
         if _autoFarmScraps then
-            if next(ScrapHighlights) == nil then scanScraps() end
+            if next(ActiveScraps) == nil then ScanScraps() end
             local myHRP = getHRP()
             if myHRP then
                 local closest, dist = nil, math.huge
-                for scrap, hl in pairs(ScrapHighlights) do
+                for scrap, data in pairs(ActiveScraps) do
                     if scrap.Parent then
                         local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
                         if primary then
-                            local d = (primary.Position - myHRP.Position).Magnitude
-                            if d < dist then dist = d; closest = scrap end
+                            if _autoFarmTarget == "All" or data.ClassName == _autoFarmTarget then
+                                local d = (primary.Position - myHRP.Position).Magnitude
+                                if d < dist then dist = d; closest = scrap end
+                            end
                         end
                     else
-                        if hl then hl:Destroy() end
-                        ScrapHighlights[scrap] = nil
+                        if data.Highlight then data.Highlight:Destroy() end
+                        ActiveScraps[scrap] = nil
                     end
                 end
                 if closest then
@@ -311,6 +377,9 @@ task.spawn(function()
     end
 end)
 
+-- ==========================================
+-- REVENANT
+-- ==========================================
 Tabs.Revenant:AddSection("NPC Tracking")
 local _revenantTracking = false
 local _revenantPresent = false
@@ -399,9 +468,12 @@ Tabs.Revenant:AddButton({
     end
 })
 
+-- ==========================================
+-- PLAYERS & TELEPORT
+-- ==========================================
 Tabs.Players:AddSection("Player Tracking")
 Tabs.Players:AddToggle("PlayerTracker", {
-    Title = "Enable Player Tracker",
+    Title = "Enable Player Tracker (ESP)",
     Default = false,
     Callback = function(state)
         if state then Notify.Success("Players", "Player Tracker: ON") else Notify.Info("Players", "Player Tracker: OFF") end
@@ -414,18 +486,15 @@ task.spawn(function()
         if Options.PlayerTracker and Options.PlayerTracker.Value then
             for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= LocalPlayer and plr.Character then
-                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        if not TrackerHighlights[plr] then
-                            local hl = Instance.new("Highlight")
-                            hl.FillColor = Color3.fromRGB(0, 255, 0)
-                            hl.FillTransparency = 0.7
-                            hl.OutlineColor = Color3.fromRGB(0, 255, 0)
-                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            hl.Adornee = plr.Character
-                            hl.Parent = plr.Character
-                            TrackerHighlights[plr] = hl
-                        end
+                    if not TrackerHighlights[plr] then
+                        local hl = Instance.new("Highlight")
+                        hl.FillColor = Color3.fromRGB(0, 255, 0)
+                        hl.FillTransparency = 0.7
+                        hl.OutlineColor = Color3.fromRGB(0, 255, 0)
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Adornee = plr.Character
+                        hl.Parent = plr.Character
+                        TrackerHighlights[plr] = hl
                     end
                 end
             end
@@ -488,6 +557,9 @@ for name, pos in pairs(locations) do
     })
 end
 
+-- ==========================================
+-- OPTIMIZATION
+-- ==========================================
 Tabs.Optimization:AddSection("Visual & Performance")
 Tabs.Optimization:AddToggle("OptLighting", {
     Title = "Disable Shadows & Lights",
@@ -630,6 +702,6 @@ track(LocalPlayer.CharacterAdded:Connect(function()
 end))
 
 track(LocalPlayer.CharacterRemoving:Connect(function()
-    clearHighlights()
+    ClearAllScraps()
     _autoFarmScraps = false
 end))
