@@ -10,7 +10,6 @@ local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local function fetch(url)
     local ok, body = pcall(function() return game:HttpGet(url) end)
@@ -33,14 +32,14 @@ if isfile("TRS_Panel/Lang.txt") then
 end
 
 local Translations = {
-    EN = { welcome = "Welcome, ", connected = "Connected", executor = "Executor: ", stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character", vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness", combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically", delay = "Delay (ms)", stamina = "Infinite Stamina", players = "Player Actions", tpClosest = "Teleport to Closest", selectPlayer = "Select Player", tpSelected = "Teleport to Selected", esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker", revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant", revStatus = "Revenant Status", limbs = "Limb Health", farm = "Scrap Farming", scrapEsp = "Scrap ESP", scrapEspDesc = "Highlights scraps", scrapType = "Scrap type filter", scan = "Rescan Scraps", scanDesc = "Forces a new scan now", tpScrap = "Go to Closest Scrap", autoFarm = "Auto Farm", autoFarmDesc = "Teleports to closest scrap", seerEsp = "Seer Orb ESP", seerEspDesc = "Highlights Seer orbs", tpSeer = "Go to Closest Seer Orb", prompts = "Auto Interact", promptsDesc = "Fires prompts automatically", teleport = "Teleport Locations", goTo = "Go to ", util = "Utilities", antiRag = "Anti Ragdoll", antiBarrier = "Anti Barrier", antiBarrierDesc = "Moves barbed wire away", fastRepair = "Fast Power Repair", fastRepairDesc = "Shortens hold time", antiAfk = "Anti-AFK", opti = "Optimization", optiTerrain = "Remove Terrain Details", optiTerrainDesc = "Removes grass/details", optiMat = "Simplify Materials", optiMatDesc = "SmoothPlastic on map", optiShadow = "Disable Shadows", optiShadowDesc = "Turns off shadows", hop = "Server Hop", hopDesc = "Joins a new server", settings = "Settings", lang = "Language (Reloads UI)", unload = "Unload Panel", unloadDesc = "Removes the panel", logs = "Server Logs", hourLog = "Hour Activations", roundLog = "Round Activations", worldLog = "World Events", none = "None yet.", waiting = "Waiting for events..." },
-    MX = { welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ", stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje", vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad", combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente", delay = "Retardo (ms)", stamina = "Stamina Infinita", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano", selectPlayer = "Elegir Jugador", tpSelected = "Ir al Elegido", esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant", revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant", revStatus = "Estado del Revenant", limbs = "Salud de Extremidades", farm = "Farmeo de Scraps", scrapEsp = "ESP de Scraps", scrapEspDesc = "Resalta cada scrap", scrapType = "Filtro de tipo", scan = "Reescanear Scraps", scanDesc = "Fuerza un escaneo ahora", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear", autoFarmDesc = "Teletransporta al scrap más cercano", seerEsp = "ESP de Orbes Seer", seerEspDesc = "Resalta los orbes Seer", tpSeer = "Ir al Orbe Seer Más Cercano", prompts = "Auto Interactuar", promptsDesc = "Activa prompts automáticamente", teleport = "Puntos de Teletransporte", goTo = "Ir a ", util = "Utilidades", antiRag = "Anti Ragdoll", antiBarrier = "Anti Barrera", antiBarrierDesc = "Aleja el alambre", fastRepair = "Reparación Rápida", fastRepairDesc = "Acorta el tiempo de mantener", antiAfk = "Anti-AFK", opti = "Optimización", optiTerrain = "Quitar Detalles del Terreno", optiTerrainDesc = "Quita pasto/detalles", optiMat = "Simplificar Materiales", optiMatDesc = "SmoothPlastic en el mapa", optiShadow = "Apagar Sombras", optiShadowDesc = "Desactiva sombras", hop = "Server Hop", hopDesc = "Salta a otro servidor", settings = "Ajustes", lang = "Idioma (Recarga UI)", unload = "Descargar Panel", unloadDesc = "Quita el panel", logs = "Registros del Servidor", hourLog = "Horas Activadas", roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo", none = "Nada todavía.", waiting = "Esperando eventos..." }
+    EN = { welcome = "Welcome, ", connected = "Connected", executor = "Executor: ", stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character", vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness", combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically", delay = "Delay (ms)", players = "Player Actions", tpClosest = "Teleport to Closest", esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker", revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant", revStatus = "Revenant Status", farm = "Scrap Farming", scan = "Rescan Scraps", tpScrap = "Go to Closest Scrap", autoFarm = "Auto Farm", teleport = "Teleport Locations", goTo = "Go to ", util = "Utilities", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK", hop = "Server Hop", settings = "Settings", lang = "Language (Reloads UI)", logs = "Server Logs", hourLog = "Hour Activations", roundLog = "Round Activations", worldLog = "World Events" },
+    MX = { welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ", stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje", vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad", combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente", delay = "Retardo (ms)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano", esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant", revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant", revStatus = "Estado del Revenant", farm = "Farmeo de Scraps", scan = "Reescanear Scraps", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear", teleport = "Puntos de Teletransporte", goTo = "Ir a ", util = "Utilidades", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK", hop = "Server Hop", settings = "Ajustes", lang = "Idioma (Recarga UI)", logs = "Registros del Servidor", hourLog = "Horas Activadas", roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo" }
 }
 local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
-    SubTitle = "v26.0",
+    SubTitle = "v27.0",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -66,16 +65,17 @@ local UI = {}
 local function getHRP() local c = LocalPlayer.Character; return c and c:FindFirstChild("HumanoidRootPart") end
 local function getHumanoid() local c = LocalPlayer.Character; return c and c:FindFirstChildOfClass("Humanoid") end
 local function doTeleport(pos) local h = getHRP(); if h and pos then h.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)); return true end return false end
+
 local function notify(title, content) 
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = title,
             Text = content,
-            Duration = 4,
-            Icon = "rbxassetid://13491664797"
+            Duration = 4
         })
     end)
 end
+
 local function getExecutor() if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok then return name end end return "Unknown" end
 
 Tabs.Main:AddSection("Account Information")
