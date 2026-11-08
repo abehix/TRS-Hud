@@ -1,31 +1,41 @@
-if _G.__TRS_WINDOW then
-    pcall(function() _G.__TRS_WINDOW:Destroy() end)
-    _G.__TRS_WINDOW = nil
-end
-if getgenv().TRS_HOOKS then
-    for _, h in pairs(getgenv().TRS_HOOKS) do
-        pcall(function() h:Disconnect() end)
+pcall(function()
+    if _G.__TRS_WINDOW then
+        _G.__TRS_WINDOW:Destroy()
+        _G.__TRS_WINDOW = nil
     end
-    getgenv().TRS_HOOKS = nil
-end
-if getgenv().TRS_OLD_TAKE_STAMINA then
-    pcall(function()
-        if getgenv().TRS_TAKE_STAMINA_FUNC then
-            hookfunction(getgenv().TRS_TAKE_STAMINA_FUNC, getgenv().TRS_OLD_TAKE_STAMINA)
+end)
+pcall(function()
+    local cg = game:GetService("CoreGui")
+    local old = cg:FindFirstChild("Fluent")
+    if old then old:Destroy() end
+end)
+pcall(function()
+    local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+    local old = pg and pg:FindFirstChild("Fluent")
+    if old then old:Destroy() end
+end)
+pcall(function()
+    if getgenv and getgenv().TRS_OLD_TAKE_STAMINA and getgenv().TRS_TAKE_STAMINA_FUNC then
+        hookfunction(getgenv().TRS_TAKE_STAMINA_FUNC, getgenv().TRS_OLD_TAKE_STAMINA)
+        getgenv().TRS_OLD_TAKE_STAMINA = nil
+        getgenv().TRS_TAKE_STAMINA_FUNC = nil
+    end
+end)
+pcall(function()
+    if getgenv and getgenv().TRS_OLD_CHECK_STAMINA and getgenv().TRS_CHECK_STAMINA_FUNC then
+        hookfunction(getgenv().TRS_CHECK_STAMINA_FUNC, getgenv().TRS_OLD_CHECK_STAMINA)
+        getgenv().TRS_OLD_CHECK_STAMINA = nil
+        getgenv().TRS_CHECK_STAMINA_FUNC = nil
+    end
+end)
+pcall(function()
+    if getgenv and getgenv().TRS_HOOKS then
+        for _, h in pairs(getgenv().TRS_HOOKS) do
+            pcall(function() h:Disconnect() end)
         end
-    end)
-    getgenv().TRS_OLD_TAKE_STAMINA = nil
-    getgenv().TRS_TAKE_STAMINA_FUNC = nil
-end
-if getgenv().TRS_OLD_CHECK_STAMINA then
-    pcall(function()
-        if getgenv().TRS_CHECK_STAMINA_FUNC then
-            hookfunction(getgenv().TRS_CHECK_STAMINA_FUNC, getgenv().TRS_OLD_CHECK_STAMINA)
-        end
-    end)
-    getgenv().TRS_OLD_CHECK_STAMINA = nil
-    getgenv().TRS_CHECK_STAMINA_FUNC = nil
-end
+        getgenv().TRS_HOOKS = nil
+    end
+end)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -33,9 +43,24 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+local okFluent, Fluent = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+end)
+
+if not okFluent or not Fluent then
+    return
+end
+
+local okSM, SaveManager = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+end)
+
+local okIM, InterfaceManager = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+end)
+
+if not okSM then SaveManager = nil end
+if not okIM then InterfaceManager = nil end
 
 local Options = Fluent.Options
 
@@ -566,18 +591,21 @@ for name, pos in pairs(locations) do
     })
 end
 
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-InterfaceManager:SetFolder("TRS_Panel")
-SaveManager:SetFolder("TRS_Panel/Configs")
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
+if SaveManager and InterfaceManager then
+    pcall(function()
+        SaveManager:SetLibrary(Fluent)
+        InterfaceManager:SetLibrary(Fluent)
+        SaveManager:IgnoreThemeSettings()
+        InterfaceManager:SetFolder("TRS_Panel")
+        SaveManager:SetFolder("TRS_Panel/Configs")
+        InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+        SaveManager:BuildConfigSection(Tabs.Settings)
+    end)
+end
 
 task.spawn(function()
     task.wait(1.5)
-    Window:SelectTab(1)
+    pcall(function() Window:SelectTab(1) end)
     Notify.Success("TRS Panel", "Sistema inicializado correctamente.", 4)
 end)
 
