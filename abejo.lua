@@ -1,41 +1,13 @@
-pcall(function()
-    if _G.__TRS_WINDOW then
-        _G.__TRS_WINDOW:Destroy()
-        _G.__TRS_WINDOW = nil
+if _G.__TRS_WINDOW then
+    pcall(function() _G.__TRS_WINDOW:Destroy() end)
+    _G.__TRS_WINDOW = nil
+end
+if getgenv and getgenv().TRS_HOOKS then
+    for _, h in pairs(getgenv().TRS_HOOKS) do
+        pcall(function() h:Disconnect() end)
     end
-end)
-pcall(function()
-    local cg = game:GetService("CoreGui")
-    local old = cg:FindFirstChild("Fluent")
-    if old then old:Destroy() end
-end)
-pcall(function()
-    local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-    local old = pg and pg:FindFirstChild("Fluent")
-    if old then old:Destroy() end
-end)
-pcall(function()
-    if getgenv and getgenv().TRS_OLD_TAKE_STAMINA and getgenv().TRS_TAKE_STAMINA_FUNC then
-        hookfunction(getgenv().TRS_TAKE_STAMINA_FUNC, getgenv().TRS_OLD_TAKE_STAMINA)
-        getgenv().TRS_OLD_TAKE_STAMINA = nil
-        getgenv().TRS_TAKE_STAMINA_FUNC = nil
-    end
-end)
-pcall(function()
-    if getgenv and getgenv().TRS_OLD_CHECK_STAMINA and getgenv().TRS_CHECK_STAMINA_FUNC then
-        hookfunction(getgenv().TRS_CHECK_STAMINA_FUNC, getgenv().TRS_OLD_CHECK_STAMINA)
-        getgenv().TRS_OLD_CHECK_STAMINA = nil
-        getgenv().TRS_CHECK_STAMINA_FUNC = nil
-    end
-end)
-pcall(function()
-    if getgenv and getgenv().TRS_HOOKS then
-        for _, h in pairs(getgenv().TRS_HOOKS) do
-            pcall(function() h:Disconnect() end)
-        end
-        getgenv().TRS_HOOKS = nil
-    end
-end)
+    getgenv().TRS_HOOKS = nil
+end
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
