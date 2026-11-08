@@ -7,6 +7,7 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -39,7 +40,7 @@ local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
-    SubTitle = "v25.0",
+    SubTitle = "v26.0",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -65,42 +66,17 @@ local UI = {}
 local function getHRP() local c = LocalPlayer.Character; return c and c:FindFirstChild("HumanoidRootPart") end
 local function getHumanoid() local c = LocalPlayer.Character; return c and c:FindFirstChildOfClass("Humanoid") end
 local function doTeleport(pos) local h = getHRP(); if h and pos then h.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)); return true end return false end
-local function notify(title, content) Fluent:Notify({ Title = title, Content = content, Duration = 4 }) end
-local function getExecutor() if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok then return name end end return "Unknown" end
-
-local ToastGui = Instance.new("ScreenGui")
-ToastGui.Name = "TRS_Toasts"
-ToastGui.ResetOnSpawn = false
-ToastGui.Parent = CoreGui
-local ToastLayout = Instance.new("UIListLayout")
-ToastLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-ToastLayout.Padding = UDim.new(0, 10)
-ToastLayout.Parent = ToastGui
-
-local function showToast(text, color)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 250, 0, 40)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    frame.BorderSizePixel = 0
-    frame.Parent = ToastGui
-    local stroke = Instance.new("UIStroke", frame)
-    stroke.Color = color
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -10, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 12
-    task.spawn(function()
-        task.wait(4)
-        TweenService:Create(frame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(label, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-        task.wait(0.5)
-        if frame.Parent then frame:Destroy() end
+local function notify(title, content) 
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = content,
+            Duration = 4,
+            Icon = "rbxassetid://13491664797"
+        })
     end)
 end
+local function getExecutor() if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok then return name end end return "Unknown" end
 
 Tabs.Main:AddSection("Account Information")
 Tabs.Main:AddParagraph({ Title = "The Revenant: Sunrisen [HALLOWS]", Content = "HUD Made By @kyyabe08\n" .. L.welcome .. LocalPlayer.Name })
@@ -152,6 +128,31 @@ Tabs.Revenant:AddButton({ Title = L.tpRev, Icon = "navigation", Callback = funct
     local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
     if hrp then doTeleport(hrp.Position) end
 end })
+
+local revStatus = "none"
+task.spawn(function()
+    while task.wait(1) do
+        local npcs = Workspace:FindFirstChild("NPCs")
+        local rev = npcs and npcs:FindFirstChild("Revenant")
+        
+        if rev then
+            local hum = rev:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if hum.Health > 0 and revStatus ~= "alive" then
+                    revStatus = "alive"
+                    notify("Revenant", "The Revenant has spawned!")
+                elseif hum.Health <= 0 and revStatus == "alive" then
+                    revStatus = "dead"
+                    notify("Revenant", "The Revenant has died!")
+                end
+            end
+        else
+            if revStatus == "alive" or revStatus == "dead" then
+                revStatus = "none"
+            end
+        end
+    end
+end)
 
 Tabs.Farm:AddSection(L.farm)
 local ScrapHighlights = {}
@@ -300,7 +301,7 @@ local function addWorldLog(text, color)
     table.insert(worldHistory, 1, "[" .. os.date("%X") .. "] " .. text)
     if #worldHistory > 10 then table.remove(worldHistory) end
     updateLogs()
-    if color then showToast(text, color) end
+    if color then notify("Event", text) end
 end
 
 task.spawn(function()
@@ -370,7 +371,6 @@ Tabs.Settings:AddDropdown("Language", {
             notify("System", "Reloading UI...")
             task.wait(1)
             if Fluent then Fluent:Destroy() end
-            if ToastGui then ToastGui:Destroy() end
             _G.TRSPanelLoaded:Destroy()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/abehix/TRS-Hud/main/abejo.lua"))()
         end
@@ -378,7 +378,6 @@ Tabs.Settings:AddDropdown("Language", {
 })
 Tabs.Settings:AddButton({ Title = "Force Reload", Icon = "refresh-cw", Callback = function()
     if Fluent then Fluent:Destroy() end
-    if ToastGui then ToastGui:Destroy() end
     _G.TRSPanelLoaded:Destroy()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/abehix/TRS-Hud/main/abejo.lua"))()
 end })
@@ -416,7 +415,6 @@ end)
 
 Window:SelectTab(1)
 notify("TRS Panel", "System Initialized.")
-addWorldLog("HUD Loaded and Monitoring.", Color3.fromRGB(0, 150, 255))
 
 LocalPlayer.CharacterRemoving:Connect(function() 
     for _, hl in pairs(ScrapHighlights) do if hl then hl:Destroy() end end
