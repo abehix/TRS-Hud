@@ -11,7 +11,6 @@ end
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local Lighting = game:GetService("Lighting")
@@ -43,13 +42,6 @@ local function track(conn)
     return conn
 end
 
-local function disconnectAll()
-    for conn in pairs(Connections) do
-        pcall(function() conn:Disconnect() end)
-    end
-    table.clear(Connections)
-end
-
 local Window = Fluent:CreateWindow({
     Title = "TRS Panel",
     SubTitle = "v9.0 Premium",
@@ -68,11 +60,11 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
     Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
     Players = Window:AddTab({ Title = "Players", Icon = "users" }),
-    Farm = Window:AddTab({ Title = "Farm", Icon = "shovel" }), -- Ícono arreglado
+    Farm = Window:AddTab({ Title = "Farm", Icon = "shovel" }),
     Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map-pin" }),
     Utilities = Window:AddTab({ Title = "Utilities", Icon = "wrench" }),
-    Optimization = Window:AddTab({ Title = "Optimization", Icon = "zap" }), -- Nueva Pestaña
+    Optimization = Window:AddTab({ Title = "Optimization", Icon = "zap" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -529,7 +521,7 @@ Tabs.Optimization:AddToggle("OptParticles", {
 
 Tabs.Optimization:AddButton({
     Title = "Destruir Efectos Cercanos",
-    Description = "Borrapartículas a tu alrededor",
+    Description = "Borra partículas a tu alrededor",
     Callback = function()
         local hrp = getHRP()
         if hrp then
