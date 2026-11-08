@@ -4,12 +4,8 @@ local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
 local Lighting = game:GetService("Lighting")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local function fetch(url)
     local ok, body = pcall(function() return game:HttpGet(url) end)
@@ -17,36 +13,25 @@ local function fetch(url)
     return nil
 end
 
+-- Cargamos Fluent sin aditamentos (SaveManager quitado para evitar crashes)
 local fluentChunk = fetch("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua")
-if not fluentChunk then return warn("[TRS] No se pudo descargar Fluent.") end
+if not fluentChunk then return warn("[TRS] No se pudo descargar Fluent. Revisa tu internet.") end
 local Fluent = loadstring(fluentChunk)()
 
-local saveChunk = fetch("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua")
-local interfaceChunk = fetch("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua")
-local SaveManager = saveChunk and loadstring(saveChunk)() or nil
-local InterfaceManager = interfaceChunk and loadstring(interfaceChunk)() or nil
-
-if _G.TRSPanelLoaded then
-    pcall(function() _G.TRSPanelLoaded:Destroy() end)
-end
+-- Limpieza de versiones anteriores
+if _G.TRSPanelLoaded then pcall(function() _G.TRSPanelLoaded:Destroy() end) end
 _G.TRSPanelLoaded = Instance.new("Folder")
 
-if not isfolder("TRS_Panel") then makefolder("TRS_Panel") end
 local CurrentLang = "EN"
-if isfile("TRS_Panel/Lang.txt") then
-    local read = readfile("TRS_Panel/Lang.txt")
-    if read ~= "" then CurrentLang = read end
-end
-
 local Translations = {
-    EN = { welcome = "Welcome, ", connected = "Connected", executor = "Executor: ", stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character", vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness", combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically", delay = "Delay (ms)", stamina = "Infinite Stamina", players = "Player Actions", tpClosest = "Teleport to Closest", esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker", revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant", revStatus = "Revenant Status", limbs = "Limb Health", farm = "Scrap Farming", scrapEsp = "Scrap ESP", scrapEspDesc = "Highlights scraps", scrapType = "Scrap type filter", scan = "Rescan Scraps", tpScrap = "Go to Closest Scrap", autoFarm = "Auto Farm", autoFarmDesc = "Teleports to closest scrap", seerEsp = "Seer Orb ESP", seerEspDesc = "Highlights Seer orbs", tpSeer = "Go to Closest Seer Orb", prompts = "Auto Interact", promptsDesc = "Fires prompts automatically", teleport = "Teleport Locations", goTo = "Go to ", util = "Utilities", antiRag = "Anti Ragdoll", antiBarrier = "Anti Barrier", antiBarrierDesc = "Moves barbed wire", fastRepair = "Fast Power Repair", fastRepairDesc = "Shortens hold time", antiAfk = "Anti-AFK", opti = "Optimization", optiTerrain = "Remove Terrain Details", optiTerrainDesc = "Removes grass", optiMat = "Simplify Materials", optiMatDesc = "SmoothPlastic on map", optiShadow = "Disable Shadows", optiShadowDesc = "Turns off shadows", hop = "Server Hop", hopDesc = "Joins a new server", settings = "Settings", lang = "Language (Reloads UI)", unload = "Unload Panel", unloadDesc = "Removes the panel", logs = "Server Logs", hourLog = "Hour Activations", roundLog = "Round Activations", worldLog = "World Events", none = "None yet.", waiting = "Waiting for events..." },
-    MX = { welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ", stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje", vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad", combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente", delay = "Retardo (ms)", stamina = "Stamina Infinita", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano", esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant", revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant", revStatus = "Estado del Revenant", limbs = "Salud de Extremidades", farm = "Farmeo de Scraps", scrapEsp = "ESP de Scraps", scrapEspDesc = "Resalta cada scrap", scrapType = "Filtro de tipo", scan = "Reescanear Scraps", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear", autoFarmDesc = "Teletransporta al scrap más cercano", seerEsp = "ESP de Orbes Seer", seerEspDesc = "Resalta los orbes Seer", tpSeer = "Ir al Orbe Seer Más Cercano", prompts = "Auto Interactuar", promptsDesc = "Activa prompts automáticamente", teleport = "Puntos de Teletransporte", goTo = "Ir a ", util = "Utilidades", antiRag = "Anti Ragdoll", antiBarrier = "Anti Barrera", antiBarrierDesc = "Aleja el alambre", fastRepair = "Reparación Rápida", fastRepairDesc = "Acorta el tiempo de mantener", antiAfk = "Anti-AFK", opti = "Optimización", optiTerrain = "Quitar Detalles del Terreno", optiTerrainDesc = "Quita pasto", optiMat = "Simplificar Materiales", optiMatDesc = "SmoothPlastic en el mapa", optiShadow = "Apagar Sombras", optiShadowDesc = "Desactiva sombras", hop = "Server Hop", hopDesc = "Salta a otro servidor", settings = "Ajustes", lang = "Idioma (Recarga UI)", unload = "Descargar Panel", unloadDesc = "Quita el panel", logs = "Registros del Servidor", hourLog = "Horas Activadas", roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo", none = "Nada todavía.", waiting = "Esperando eventos..." }
+    EN = { welcome = "Welcome, ", connected = "Connected", executor = "Executor: ", stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character", vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness", combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically", delay = "Delay (ms)", players = "Player Actions", tpClosest = "Teleport to Closest", esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker", revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant", revStatus = "Revenant Status", limbs = "Limb Health", farm = "Scrap Farming", scan = "Rescan Scraps", tpScrap = "Go to Closest Scrap", autoFarm = "Auto Farm", prompts = "Auto Interact", teleport = "Teleport Locations", goTo = "Go to ", util = "Utilities", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK", opti = "Optimization", optiTerrain = "Remove Terrain Details", optiMat = "Simplify Materials", optiShadow = "Disable Shadows", hop = "Server Hop", settings = "Settings", lang = "Language", logs = "Server Logs", hourLog = "Hour Activations", roundLog = "Round Activations", worldLog = "World Events" },
+    MX = { welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ", stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje", vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad", combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente", delay = "Retardo (ms)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano", esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant", revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant", revStatus = "Estado del Revenant", limbs = "Salud de Extremidades", farm = "Farmeo de Scraps", scan = "Reescanear Scraps", tpScrap = "Ir al Scrap Más Cercano", autoFarm = "Auto Farmear", prompts = "Auto Interactuar", teleport = "Puntos de Teletransporte", goTo = "Ir a ", util = "Utilidades", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK", opti = "Optimización", optiTerrain = "Quitar Detalles del Terreno", optiMat = "Simplificar Materiales", optiShadow = "Apagar Sombras", hop = "Server Hop", settings = "Ajustes", lang = "Idioma", logs = "Registros del Servidor", hourLog = "Horas Activadas", roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo" }
 }
 local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
-    SubTitle = "v24.0",
+    SubTitle = "v25.0 Debug",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -75,11 +60,11 @@ local function doTeleport(pos) local h = getHRP(); if h and pos then h.CFrame = 
 local function notify(title, content) Fluent:Notify({ Title = title, Content = content, Duration = 4 }) end
 local function getExecutor() if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok then return name end end return "Unknown" end
 
+-- TOASTS
 local ToastGui = Instance.new("ScreenGui")
 ToastGui.Name = "TRS_Toasts"
 ToastGui.ResetOnSpawn = false
 ToastGui.Parent = CoreGui
-
 local ToastLayout = Instance.new("UIListLayout")
 ToastLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Center
@@ -92,15 +77,10 @@ local function showToast(text, color)
     frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     frame.BorderSizePixel = 0
     frame.Parent = ToastGui
-    local stroke = Instance.new("UIStroke", frame)
-    stroke.Color = color
+    local stroke = Instance.new("UIStroke", frame); stroke.Color = color
     local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -10, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 12
+    label.Size = UDim2.new(1, -10, 1, 0); label.BackgroundTransparency = 1; label.Text = text
+    label.TextColor3 = Color3.new(1, 1, 1); label.Font = Enum.Font.GothamBold; label.TextSize = 12
     task.spawn(function()
         task.wait(4)
         TweenService:Create(frame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
@@ -122,7 +102,7 @@ Tabs.Main:AddSection(L.abilities)
 Tabs.Main:AddButton({ Title = L.reset, Icon = "refresh-cw", Callback = function() local h = getHumanoid(); if h then h.Health = 0 end end })
 
 Tabs.Main:AddSection(L.vision)
-UI.fullbright = Tabs.Main:AddToggle("Fullbright", { Title = L.fullbright, Description = L.fullDesc, Default = false, Callback = function(s)
+Tabs.Main:AddToggle("Fullbright", { Title = L.fullbright, Description = L.fullDesc, Default = false, Callback = function(s)
     if s then
         Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
         Lighting.FogEnd = 100000; Lighting.GlobalShadows = false
@@ -137,13 +117,10 @@ end })
 -- ==========================================
 Tabs.Combat:AddSection(L.combat)
 local _autoClick = false
-local _clickDelay = 0.1
-UI.autoClick = Tabs.Combat:AddToggle("AutoClicker", { Title = L.autoClick, Description = L.clickDesc, Default = false, Icon = "mouse-pointer", Callback = function(s) _autoClick = s end })
-UI.clickDelay = Tabs.Combat:AddSlider("ClickDelay", { Title = L.delay, Default = 100, Min = 10, Max = 1000, Rounding = 0, Callback = function(v) _clickDelay = v / 1000 end })
+Tabs.Combat:AddToggle("AutoClicker", { Title = L.autoClick, Description = L.clickDesc, Default = false, Callback = function(s) _autoClick = s end })
 
 task.spawn(function()
-    while true do
-        task.wait(_clickDelay)
+    while task.wait(0.1) do
         if _autoClick and LocalPlayer.Character then
             local cam = workspace.CurrentCamera
             if cam then
@@ -154,42 +131,33 @@ task.spawn(function()
                     VirtualUser:Button1Up(Vector2.new(center.X, center.Y), cam.CFrame)
                 end)
                 local tool = LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-                if tool and tool.Parent == LocalPlayer.Character then pcall(function() tool:Activate() end) end
+                if tool then pcall(function() tool:Activate() end) end
             end
         end
     end
 end)
 
 -- ==========================================
--- 3. REVENANT TRACKER
+-- 3. REVENANT
 -- ==========================================
 Tabs.Revenant:AddSection(L.revAct)
-local revESP = nil
-UI.revEspToggle = Tabs.Revenant:AddToggle("RevESP", { Title = L.revEsp, Description = L.revEspDesc, Icon = "eye", Default = false })
+UI.revPara = Tabs.Revenant:AddParagraph({ Title = L.revStatus, Content = "Not spawned" })
 UI.tpRev = Tabs.Revenant:AddButton({ Title = L.tpRev, Icon = "navigation", Callback = function()
     local npcs = Workspace:FindFirstChild("NPCs")
     local rev = npcs and npcs:FindFirstChild("Revenant")
     local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
     if hrp then doTeleport(hrp.Position) end
 end })
-UI.revPara = Tabs.Revenant:AddParagraph({ Title = L.revStatus, Content = "..." })
-UI.limbPara = Tabs.Revenant:AddParagraph({ Title = L.limbs, Content = "..." })
 
 -- ==========================================
--- 4. FARM & SCRAPS
+-- 4. FARM
 -- ==========================================
 Tabs.Farm:AddSection(L.farm)
 local ScrapHighlights = {}
-local _autoFarmScraps = false
-local _autoPrompt = false
 
-local function clearHighlights()
-    for scrap, hl in pairs(ScrapHighlights) do if hl and hl.Parent then hl:Destroy() end end
-    table.clear(ScrapHighlights)
-end
-
-local function scanScraps()
-    clearHighlights()
+Tabs.Farm:AddButton({ Title = L.scan, Icon = "search", Callback = function()
+    for _, hl in pairs(ScrapHighlights) do if hl then hl:Destroy() end end
+    ScrapHighlights = {}
     local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
     local folder = map and map:FindFirstChild("Scraps")
     if not folder then return notify("Farm", "Scraps not found.") end
@@ -208,10 +176,9 @@ local function scanScraps()
         end
     end
     notify("Farm", "Found " .. count .. " scraps.")
-end
+end })
 
-UI.scan = Tabs.Farm:AddButton({ Title = L.scan, Icon = "search", Callback = scanScraps })
-UI.tpScrap = Tabs.Farm:AddButton({ Title = L.tpScrap, Icon = "navigation", Callback = function()
+Tabs.Farm:AddButton({ Title = L.tpScrap, Icon = "navigation", Callback = function()
     local myHRP = getHRP(); if not myHRP then return end
     local closest, dist = nil, math.huge
     for scrap, _ in pairs(ScrapHighlights) do
@@ -225,16 +192,12 @@ UI.tpScrap = Tabs.Farm:AddButton({ Title = L.tpScrap, Icon = "navigation", Callb
     end
     if closest then local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart"); doTeleport(primary.Position) end
 end })
-UI.autoFarm = Tabs.Farm:AddToggle("AutoFarm", { Title = L.autoFarm, Icon = "map-pin", Default = false, Callback = function(s) _autoFarmScraps = s end })
-UI.autoPrompt = Tabs.Farm:AddToggle("AutoPrompt", { Title = L.prompts, Icon = "hand", Default = false, Callback = function(s) _autoPrompt = s end })
 
 -- ==========================================
 -- 5. PLAYERS
 -- ==========================================
 Tabs.Players:AddSection(L.players)
-local PlayerESP = {}
-UI.espToggle = Tabs.Players:AddToggle("PlayerESP", { Title = L.esp, Icon = "eye", Default = false })
-UI.tpClosest = Tabs.Players:AddButton({ Title = L.tpClosest, Icon = "navigation", Callback = function()
+Tabs.Players:AddButton({ Title = L.tpClosest, Icon = "navigation", Callback = function()
     local myHRP = getHRP(); if not myHRP then return end
     local closest, dist = nil, math.huge
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -247,37 +210,7 @@ UI.tpClosest = Tabs.Players:AddButton({ Title = L.tpClosest, Icon = "navigation"
 end })
 
 -- ==========================================
--- 6. LOGS
--- ==========================================
-Tabs.Logs:AddSection(L.logs)
-UI.hourText = Tabs.Logs:AddParagraph({ Title = L.hourLog, Content = "None yet." })
-UI.roundText = Tabs.Logs:AddParagraph({ Title = L.roundLog, Content = "None yet." })
-UI.worldText = Tabs.Logs:AddParagraph({ Title = L.worldLog, Content = "Waiting for events..." })
-
-local hourHistory, roundHistory, worldHistory = {}, {}, {}
-
-local function updateLogs()
-    local hStr, rStr, wStr = "", "", ""
-    for k, v in pairs(hourHistory) do hStr = hStr .. k .. " (x" .. v .. ")\n" end
-    for k, v in pairs(roundHistory) do rStr = rStr .. k .. " (x" .. v .. ")\n" end
-    if hStr == "" then hStr = "None" end
-    if rStr == "" then rStr = "None" end
-    if UI.hourText then UI.hourText:SetDesc(hStr) end
-    if UI.roundText then UI.roundText:SetDesc(rStr) end
-    for i = #worldHistory, 1, -1 do wStr = wStr .. worldHistory[i] .. "\n" end
-    if wStr == "" then wStr = "Waiting for events..." end
-    if UI.worldText then UI.worldText:SetDesc(wStr) end
-end
-
-local function addWorldLog(text, color)
-    table.insert(worldHistory, 1, "[" .. os.date("%X") .. "] " .. text)
-    if #worldHistory > 10 then table.remove(worldHistory) end
-    updateLogs()
-    if color then showToast(text, color) end
-end
-
--- ==========================================
--- 7. TELEPORT & UTILITIES
+-- 6. TELEPORT & UTILITIES
 -- ==========================================
 Tabs.Teleport:AddSection(L.teleport)
 local locs = {
@@ -289,9 +222,17 @@ local locs = {
 for name, pos in pairs(locs) do Tabs.Teleport:AddButton({ Title = L.goTo .. name, Icon = "map-pin", Callback = function() doTeleport(pos) end }) end
 
 Tabs.Utilities:AddSection(L.util)
-UI.antiRag = Tabs.Utilities:AddToggle("AntiRagdoll", { Title = L.antiRag, Icon = "shield-check", Default = true })
-UI.antiAfkToggle = Tabs.Utilities:AddToggle("AntiAFK", { Title = L.antiAfk, Icon = "clock", Default = true })
-UI.hop = Tabs.Utilities:AddButton({ Title = L.hop, Icon = "server", Callback = function()
+Tabs.Utilities:AddToggle("AntiRagdoll", { Title = L.antiRag, Icon = "shield-check", Default = true })
+task.spawn(function()
+    while task.wait(0.5) do
+        if Options.AntiRagdoll.Value and LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false) end) end
+        end
+    end
+end)
+
+Tabs.Utilities:AddButton({ Title = L.hop, Icon = "server", Callback = function()
     notify("Server Hop", "Searching...")
     pcall(function()
         local servers = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
@@ -305,16 +246,16 @@ UI.hop = Tabs.Utilities:AddButton({ Title = L.hop, Icon = "server", Callback = f
 end })
 
 -- ==========================================
--- 8. SETTINGS & RECARGA
+-- 7. SETTINGS
 -- ==========================================
 Tabs.Settings:AddSection(L.settings)
-UI.lang = Tabs.Settings:AddDropdown("Language", {
+Tabs.Settings:AddDropdown("Language", {
     Title = L.lang, Values = { "English", "Español" },
     Default = (CurrentLang == "EN" and "English") or "Español", Multi = false,
     Callback = function(v)
         local newLang = (v == "English" and "EN") or "MX"
         if newLang ~= CurrentLang then
-            writefile("TRS_Panel/Lang.txt", newLang)
+            if writefile then pcall(writefile, "TRS_Panel/Lang.txt", newLang) end
             notify("System", "Reloading UI...")
             task.wait(1)
             if Fluent then Fluent:Destroy() end
@@ -325,19 +266,12 @@ UI.lang = Tabs.Settings:AddDropdown("Language", {
     end
 })
 
--- Botón para forzar la UI si se congela
-Tabs.Settings:AddButton({ Title = "Forzar Recarga", Icon = "refresh-cw", Callback = function()
+Tabs.Settings:AddButton({ Title = "Force Reload (Fix UI)", Icon = "refresh-cw", Callback = function()
     if Fluent then Fluent:Destroy() end
     if ToastGui then ToastGui:Destroy() end
     _G.TRSPanelLoaded:Destroy()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/abehix/TRS-Hud/main/abejo.lua"))()
 end })
-
-if SaveManager and InterfaceManager then
-    SaveManager:SetLibrary(Fluent); InterfaceManager:SetLibrary(Fluent)
-    InterfaceManager:SetFolder("TRS_Panel"); SaveManager:SetFolder("TRS_Panel/Configs")
-    InterfaceManager:BuildInterfaceSection(Tabs.Settings); SaveManager:BuildConfigSection(Tabs.Settings)
-end
 
 -- ==========================================
 -- LOOPS
@@ -373,79 +307,5 @@ task.spawn(function()
     end)
 end)
 
-task.spawn(function()
-    while task.wait(0.5) do
-        if Options.PlayerESP.Value then
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= LocalPlayer and plr.Character and not PlayerESP[plr] then
-                    local hl = Instance.new("Highlight")
-                    hl.FillColor = Color3.fromRGB(255, 50, 50); hl.FillTransparency = 0.5
-                    hl.OutlineColor = Color3.fromRGB(255, 255, 255); hl.Adornee = plr.Character; hl.Parent = plr.Character
-                    PlayerESP[plr] = hl
-                end
-            end
-        else
-            for plr, hl in pairs(PlayerESP) do if hl and hl.Parent then hl:Destroy() end PlayerESP[plr] = nil end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if Options.AntiRagdoll.Value and LocalPlayer.Character then
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if hum then pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false) end) end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if _autoFarmScraps then
-            local myHRP = getHRP()
-            if myHRP then
-                local closest, dist = nil, math.huge
-                for scrap, _ in pairs(ScrapHighlights) do
-                    if scrap.Parent then
-                        local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
-                        if primary then
-                            local d = (primary.Position - myHRP.Position).Magnitude
-                            if d < dist then dist = d; closest = scrap end
-                        end
-                    end
-                end
-                if closest then local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart"); doTeleport(primary.Position) end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.15) do
-        if _autoPrompt then
-            local myHRP = getHRP()
-            if myHRP then
-                for _, desc in ipairs(Workspace:GetDescendants()) do
-                    if desc:IsA("ProximityPrompt") and desc.Enabled then
-                        local parent = desc.Parent
-                        local pos
-                        if parent:IsA("BasePart") then pos = parent.Position
-                        elseif parent:IsA("Model") then local p = parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart"); if p then pos = p.Position end end
-                        if pos and (pos - myHRP.Position).Magnitude <= (desc.MaxActivationDistance + 5) then
-                            pcall(function()
-                                desc.HoldDuration = 0
-                                if fireproximityprompt then fireproximityprompt(desc) else desc:InputHoldBegin(); task.wait(); desc:InputHoldEnd() end
-                            end)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
 Window:SelectTab(1)
 notify("TRS Panel", "System Initialized.")
-addWorldLog("HUD Loaded and Monitoring.", Color3.fromRGB(0, 150, 255))
-
-LocalPlayer.CharacterRemoving:Connect(function() clearHighlights(); _autoFarmScraps = false end)
