@@ -451,7 +451,7 @@ local function SellScraps()
 end
 
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(0.5) do
         if _autoFarmScraps then
             if next(ActiveScraps) == nil then ScanScraps() end
             local myHRP = getHRP()
@@ -473,7 +473,7 @@ task.spawn(function()
                 end
                 if closest then
                     local basePart = closest:FindFirstChild("Base")
-                    if basePart then doTeleport(basePart.Position) end
+                    if basePart then doTeleport(CFrame.new(basePart.Position + Vector3.new(0, 3, 0))) end
                 end
             end
         end
