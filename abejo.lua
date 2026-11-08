@@ -263,11 +263,15 @@ local function ToggleScrapHighlight(className, state)
             if state then
                 if not data.Highlight or not data.Highlight.Parent then
                     local hl = Instance.new("Highlight")
-                    if className == "Exotic" then
+                    
+                    local targetClass = tostring(className)
+                    
+                    if targetClass == "Exotic" then
                         hl.FillColor = Color3.fromHSV(math.random(), 1, 1)
                     else
-                        hl.FillColor = ScrapClasses[className] and ScrapClasses[className].Color or Color3.fromRGB(255, 255, 255)
+                        hl.FillColor = ScrapClasses[targetClass] and ScrapClasses[targetClass].Color or Color3.fromRGB(255, 255, 255)
                     end
+                    
                     hl.FillTransparency = 0.4
                     hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                     hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
@@ -343,7 +347,7 @@ if Options.ScrapClassDropdown then
     Options.ScrapClassDropdown:SetValues({"All"})
 end
 
-local ClassDropdown = Tabs.Farm:AddDropdown("ScrapClassDropdown", {
+Tabs.Farm:AddDropdown("ScrapClassDropdown", {
     Title = "Auto Farm Target Class",
     Values = {"All", "Golden", "Common", "Cursed", "Shiny", "Exotic"},
     Multi = false,
