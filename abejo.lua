@@ -199,18 +199,30 @@ task.spawn(function()
                     task.wait(0.01)
                     VirtualUser:Button1Up(Vector2.new(center.X, center.Y), cam.CFrame)
                 end)
+                
                 local char = LocalPlayer.Character
+                local hum = char:FindFirstChildOfClass("Humanoid")
                 local tool = char:FindFirstChildWhichIsA("Tool")
-                if tool and tool.Parent == char then pcall(function() tool:Activate() end) end
+                
+                if hum and hum.Health > 0 then
+                    if tool then
+                        pcall(function() tool:Activate() end)
+                    else
+                        local backpack = LocalPlayer:FindFirstChild("Backpack")
+                        if backpack then
+                            local newTool = backpack:FindFirstChildWhichIsA("Tool")
+                            if newTool and hum then
+                                pcall(function() hum:EquipTool(newTool) end)
+                            end
+                        end
+                    end
+                end
             end
             task.wait(_clickDelay)
         end
     end
 end)
 
--- ==========================================
--- ADVANCED FARM SYSTEM (FIXED HIERARCHY)
--- ==========================================
 Tabs.Farm:AddSection("Scrap Detection")
 
 local ScrapClasses = {
@@ -278,7 +290,6 @@ local function ScanScraps()
     local counts = { Golden = 0, Common = 0, Cursed = 0, Shiny = 0, Exotic = 0 }
     local found = 0
     
-    -- Navegar por la jerarquía exacta: Workspace -> MAP -> Scraps
     local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
     local scrapsFolder = map and map:FindFirstChild("Scraps")
     
@@ -287,12 +298,11 @@ local function ScanScraps()
         return
     end
     
-    -- Iterar por todas las subcarpetas (BigCabin, BrokenBuilding, Bunker, etc.)
     for _, zoneFolder in ipairs(scrapsFolder:GetChildren()) do
-        -- Buscar cualquier modelo que empiece con "Scrap" dentro de esa zona
-        for _, obj in ipairs(zoneFolder:GetChildren()) do
-            if obj:IsA("Model") and (obj.Name:match("^Scrap") or obj.Name:match("^scrap")) then
+        for _, obj in ipairs(zoneFolder:GetDescendants()) do
+            if obj:IsA("Model") and obj.Name:match("^Scrap") then
                 local basePart = obj:FindFirstChild("Base")
+                
                 if basePart and basePart:IsA("BasePart") then
                     local color = basePart.Color
                     local className = GetClassFromColor(color)
@@ -310,7 +320,6 @@ local function ScanScraps()
         return
     end
     
-    -- Generar Toggles automáticamente
     for className, _ in pairs(ScrapClasses) do
         if not CreatedToggles[className] then
             CreatedToggles[className] = true
@@ -389,9 +398,6 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- REVENANT
--- ==========================================
 Tabs.Revenant:AddSection("NPC Tracking")
 local _revenantTracking = false
 local _revenantPresent = false
@@ -480,9 +486,6 @@ Tabs.Revenant:AddButton({
     end
 })
 
--- ==========================================
--- PLAYERS & TELEPORT
--- ==========================================
 Tabs.Players:AddSection("Player Tracking")
 Tabs.Players:AddToggle("PlayerTracker", {
     Title = "Enable Player Tracker (ESP)",
@@ -569,9 +572,6 @@ for name, pos in pairs(locations) do
     })
 end
 
--- ==========================================
--- OPTIMIZATION
--- ==========================================
 Tabs.Optimization:AddSection("Visual & Performance")
 Tabs.Optimization:AddToggle("OptLighting", {
     Title = "Disable Shadows & Lights",
@@ -582,7 +582,7 @@ Tabs.Optimization:AddToggle("OptLighting", {
             Lighting.FogEnd = 9e9
             Lighting.Brightness = 2
             for _, v in pairs(Lighting:GetDescendants()) do
-                if v:IsA("PostEffect") or v:IsA("Sky") then v:Enabled = false end
+                if v:IsA("PostEffect") or v:IsA("Sky") then v.Enabled = false end
             end
             Notify.Success("Optimization", "Shadows and lights disabled.")
         else
