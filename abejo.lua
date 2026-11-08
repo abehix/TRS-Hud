@@ -43,8 +43,7 @@ local Translations = {
         stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character",
         vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness",
         combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically",
-        delay = "Delay (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (M_MRF)", auraKillDesc = "Requires 1 manual hit to get key",
-        range = "Kill Range (studs)", players = "Player Actions", tpClosest = "Teleport to Closest",
+        delay = "Delay (ms)", players = "Player Actions", tpClosest = "Teleport to Closest",
         esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker",
         revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant",
         farm = "Scrap Farming", scan = "Scan Scraps", scanDesc = "Highlights all scraps",
@@ -63,8 +62,7 @@ local Translations = {
         stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje",
         vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad",
         combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente",
-        delay = "Retardo (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (M_MRF)", auraKillDesc = "Requiere 1 golpe manual para obtener la llave",
-        range = "Rango de Muerte (studs)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano",
+        delay = "Retardo (ms)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano",
         esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant",
         revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant",
         farm = "Farmeo de Scraps", scan = "Escanear Scraps", scanDesc = "Resalta todos los scraps",
@@ -83,7 +81,7 @@ local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
-    SubTitle = "v20.0 Ultimate Pro Edition",
+    SubTitle = "v21.0 Ultimate Pro Edition",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -94,7 +92,6 @@ local Window = Fluent:CreateWindow({
 local Tabs = {
     Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
     Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
-    Exploits = Window:AddTab({ Title = "Exploits", Icon = "zap" }),
     Players = Window:AddTab({ Title = "Players", Icon = "users" }),
     Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
     Farm = Window:AddTab({ Title = "Farm", Icon = "shovel" }),
@@ -177,7 +174,7 @@ UI.fullbright = Tabs.Main:AddToggle("Fullbright", { Title = L.fullbright, Descri
 end })
 
 -- ==========================================
--- 2. COMBAT & EXPLOITS (Aura Kill)
+-- 2. COMBAT
 -- ==========================================
 Tabs.Combat:AddSection(L.combat)
 local _autoClick = false
@@ -199,74 +196,6 @@ task.spawn(function()
                 end)
                 local tool = LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
                 if tool and tool.Parent == LocalPlayer.Character then pcall(function() tool:Activate() end) end
-            end
-        end
-    end
-end)
-
-Tabs.Exploits:AddSection(L.exploits)
-local _auraKill = false
-local _auraRange = 20
-local _auraKey = nil
-local _M_MRF_Remote = ReplicatedStorage:WaitForChild("Events", 10) and ReplicatedStorage.Events:FindFirstChild("M_MRF")
-
-UI.auraKill = Tabs.Exploits:AddToggle("AuraKill", { Title = L.auraKill, Description = L.auraKillDesc, Default = false, Icon = "zap", Callback = function(s)
-    _auraKill = s
-    if s and not _auraKey then
-        notify("Aura Kill", "Hit an enemy manually once to capture the key!")
-    end
-end })
-
-UI.auraRange = Tabs.Exploits:AddSlider("AuraRange", { Title = L.range, Default = 20, Min = 5, Max = 50, Rounding = 0, Callback = function(v) _auraRange = v end })
-
-if _M_MRF_Remote and hookmetamethod then
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if not checkcaller() and self == _M_MRF_Remote and (method == "InvokeServer" or method == "FireServer") then
-            local args = {...}
-            if _auraKill and not _auraKey and args[2] and type(args[2]) == "string" and #args[2] > 20 then
-                _auraKey = args[2]
-                notify("Aura Kill", "Key captured successfully!")
-                showToast("Key Captured!", Color3.fromRGB(0, 255, 0))
-            end
-        end
-        return oldNamecall(self, ...)
-    end)
-end
-
-task.spawn(function()
-    while task.wait(0.2) do
-        if _auraKill and _auraKey and _M_MRF_Remote and LocalPlayer.Character then
-            local tool = LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-            if tool then
-                local myHRP = getHRP()
-                if myHRP then
-                    local closest, dist = nil, _auraRange
-                    for _, v in ipairs(Workspace:GetDescendants()) do
-                        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-                            if v ~= LocalPlayer.Character and v.Humanoid.Health > 0 then
-                                local d = (v.HumanoidRootPart.Position - myHRP.Position).Magnitude
-                                if d < dist then dist = d; closest = v end
-                            end
-                        end
-                    end
-                    
-                    if closest then
-                        pcall(function()
-                            _M_MRF_Remote:InvokeServer(
-                                tool,
-                                _auraKey,
-                                "Attack",
-                                { SpeedMultiplier = 1, CurrentAttack = 1, DidCombo = false }
-                            )
-                        end)
-                        local cam = workspace.CurrentCamera
-                        VirtualUser:Button1Down(Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2), cam.CFrame)
-                        task.wait(0.05)
-                        VirtualUser:Button1Up(Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2), cam.CFrame)
-                    end
-                end
             end
         end
     end
