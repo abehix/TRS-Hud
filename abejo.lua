@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local Lighting = game:GetService("Lighting")
 local Terrain = Workspace:FindFirstChildOfClass("Terrain")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local okFluent, Fluent = pcall(function()
     return loadstring(game:HttpGetAsync("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -59,7 +60,6 @@ _G.__TRS_WINDOW = Window
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
-    Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
     Players = Window:AddTab({ Title = "Players", Icon = "users" }),
     Farm = Window:AddTab({ Title = "Farm", Icon = "shovel" }),
     Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
@@ -102,14 +102,14 @@ local function doTeleport(pos)
     local hum = getHumanoid()
     local hrp = getHRP()
     if not hum or not hrp or hum.Health <= 0 then return false end
-    hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+    hrp.CFrame = pos
     return true
 end
 
-Tabs.Main:AddParagraph({ Title = "System Status", Content = "All modules loaded successfully." })
-local StatsParagraph = Tabs.Main:AddParagraph({ Title = "Information", Content = "Waiting for data..." })
+Tabs.Main:AddSection("Player Stats")
+local ScrapStatsParagraph = Tabs.Main:AddParagraph({ Title = "Scrap Information", Content = "Waiting for data..." })
+local MoneyStatsParagraph = Tabs.Main:AddParagraph({ Title = "Money Information", Content = "Waiting for data..." })
 
-Tabs.Main:AddSection("Abilities")
 local hooksInitialized = false
 local oldTakeStamina, oldCheckStamina
 local lastHookAttempt = 0
@@ -151,6 +151,7 @@ local function InitStaminaHooks()
     if foundAny then hooksInitialized = true end
 end
 
+Tabs.Main:AddSection("Abilities")
 Tabs.Main:AddToggle("StaminaInf", {
     Title = "Infinite Stamina",
     Default = false,
@@ -170,21 +171,21 @@ Tabs.Main:AddButton({
     end
 })
 
-Tabs.Combat:AddSection("Automation")
+Tabs.Utilities:AddSection("Automation")
 local _autoClick = false
 local _clickDelay = 0.1
 
-Tabs.Combat:AddToggle("AutoClicker", {
+Tabs.Utilities:AddToggle("AutoClicker", {
     Title = "Auto Clicker",
     Default = false,
     Callback = function(state)
         _autoClick = state
-        if state then Notify.Success("Combat", "Auto Clicker: ON") else Notify.Info("Combat", "Auto Clicker: OFF") end
+        if state then Notify.Success("Utility", "Auto Clicker: ON") else Notify.Info("Utility", "Auto Clicker: OFF") end
     end
 })
 
-Tabs.Combat:AddSlider("ClickDelay", {
-    Title = "Delay (ms)", Default = 100, Min = 10, Max = 1000, Rounding = 0,
+Tabs.Utilities:AddSlider("ClickDelay", {
+    Title = "Click Delay (ms)", Default = 100, Min = 10, Max = 1000, Rounding = 0,
     Callback = function(value) _clickDelay = value / 1000 end
 })
 
@@ -223,6 +224,59 @@ task.spawn(function()
     end
 end)
 
+Tabs.Utilities:AddSection("Interaction")
+local _autoInteract = false
+local _instantHold = false
+
+Tabs.Utilities:AddToggle("AutoInteract", {
+    Title = "Auto Interact (Proximity Prompts)",
+    Default = false,
+    Callback = function(state)
+        _autoInteract = state
+        if state then Notify.Success("Utility", "Auto Interact: ON") else Notify.Info("Utility", "Auto Interact: OFF") end
+    end
+})
+
+Tabs.Utilities:AddToggle("InstantHold", {
+    Title = "Make Holds Instant",
+    Default = false,
+    Callback = function(state)
+        _instantHold = state
+        if state then Notify.Success("Utility", "Instant Holds: ON") else Notify.Info("Utility", "Instant Holds: OFF") end
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.1) do
+        if _autoInteract and LocalPlayer.Character then
+            local myHRP = getHRP()
+            if myHRP then
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") and v.Enabled then
+                        local part = v.Parent
+                        if part and part:IsA("BasePart") then
+                            local dist = (part.Position - myHRP.Position).Magnitude
+                            if dist <= v.MaxActivationDistance then
+                                if _instantHold and v.HoldDuration > 0 then
+                                    pcall(function()
+                                        local oldHold = v.HoldDuration
+                                        v.HoldDuration = 0
+                                        fireproximityprompt(v)
+                                        task.wait(0.1)
+                                        v.HoldDuration = oldHold
+                                    end)
+                                else
+                                    pcall(function() fireproximityprompt(v) end)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 Tabs.Farm:AddSection("Scrap Detection")
 
 local ScrapClasses = {
@@ -236,6 +290,7 @@ local ScrapClasses = {
 local ActiveScraps = {}  
 local _autoFarmScraps = false
 local _autoFarmTarget = "All"
+local _autoSell = false
 local CreatedToggles = {}
 
 local function GetClassFromColor(color)
@@ -372,6 +427,29 @@ Tabs.Farm:AddToggle("AutoFarm", {
     end
 })
 
+Tabs.Farm:AddToggle("AutoSell", {
+    Title = "Auto Sell Scraps",
+    Default = false,
+    Callback = function(state)
+        _autoSell = state
+        if state then Notify.Success("Farm", "Auto Sell: ON") else Notify.Info("Farm", "Auto Sell: OFF") end
+    end
+})
+
+local function SellScraps()
+    local shopSignal = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("ShopSignal")
+    if shopSignal then
+        local success, err = pcall(function()
+            shopSignal:InvokeServer("Scraps", { Type = "Sell" })
+        end)
+        if success then
+            Notify.Success("Farm", "Scraps sold successfully!")
+            return true
+        end
+    end
+    return false
+end
+
 task.spawn(function()
     while task.wait(1) do
         if _autoFarmScraps then
@@ -396,6 +474,41 @@ task.spawn(function()
                 if closest then
                     local basePart = closest:FindFirstChild("Base")
                     if basePart then doTeleport(basePart.Position) end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        local success, playerData = pcall(function()
+            local folderName = LocalPlayer.Name
+            return ReplicatedStorage.PlayerbaseData[folderName].Values.Stats
+        end)
+        
+        if success and playerData then
+            local scrapVal = playerData:FindFirstChild("Scraps")
+            local moneyVal = playerData:FindFirstChild("ScrapsPointsSold")
+            
+            if scrapVal and moneyVal then
+                local currentScraps = scrapVal.Value
+                local maxScraps = scrapVal.MaxValue
+                local totalMoney = moneyVal.Value
+                
+                ScrapStatsParagraph:SetDesc(string.format("Scraps: %d / %d", currentScraps, maxScraps))
+                MoneyStatsParagraph:SetDesc(string.format("Scraps Sold Money: $%d", totalMoney))
+                
+                if _autoSell and currentScraps >= maxScraps then
+                    Notify.Info("Farm", "Inventory full. Selling scraps...")
+                    local sold = SellScraps()
+                    
+                    if not sold then
+                        Notify.Warning("Farm", "Direct sell failed. Teleporting to shop...")
+                        doTeleport(CFrame.new(-294.194031, -13.0190001, -465.171967, -0.866007447, 0, -0.500031412, 0, 1, 0, 0.500031412, 0, -0.866007447))
+                        task.wait(1)
+                        SellScraps()
+                    end
                 end
             end
         end
@@ -484,7 +597,7 @@ Tabs.Revenant:AddButton({
         local rev = getRevenant()
         local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
         if hrp then
-            doTeleport(hrp.Position)
+            doTeleport(hrp.CFrame)
             Notify.Success("Revenant", "Teleported to Revenant.")
         else Notify.Error("Revenant", "Revenant not found.") end
     end
@@ -548,7 +661,7 @@ Tabs.Players:AddButton({
             end
         end
         if closest and dist <= 500 then
-            doTeleport(closest.Position)
+            doTeleport(closest.CFrame)
             Notify.Success("Players", "Teleported to " .. closestName)
         elseif closest then Notify.Warning("Players", "Closest player is out of range (500 studs).")
         else Notify.Warning("Players", "No nearby players.") end
@@ -570,7 +683,7 @@ for name, pos in pairs(locations) do
     Tabs.Teleport:AddButton({
         Title = name,
         Callback = function()
-            if doTeleport(pos) then Notify.Success("Teleport", "Traveling to " .. name)
+            if doTeleport(CFrame.new(pos)) then Notify.Success("Teleport", "Traveling to " .. name)
             else Notify.Error("Teleport", "Failed to teleport.") end
         end
     })
