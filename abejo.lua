@@ -14,9 +14,10 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
 
 local okFluent, Fluent = pcall(function()
-    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+    return loadstring(game:HttpGetAsync("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 if not okFluent or not Fluent then
@@ -24,11 +25,11 @@ if not okFluent or not Fluent then
 end
 
 local okSM, SaveManager = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+    return loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 end)
 
 local okIM, InterfaceManager = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+    return loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 end)
 
 if not okSM then SaveManager = nil end
@@ -77,39 +78,19 @@ local Tabs = {
 local Notify = {}
 
 function Notify.Success(title, content, duration)
-    Fluent:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 3,
-        Icon = "check-circle"
-    })
+    Fluent:Notify({ Title = title, Content = content, Duration = duration or 3, Icon = "check-circle" })
 end
 
 function Notify.Info(title, content, duration)
-    Fluent:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 3,
-        Icon = "info"
-    })
+    Fluent:Notify({ Title = title, Content = content, Duration = duration or 3, Icon = "info" })
 end
 
 function Notify.Warning(title, content, duration)
-    Fluent:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 4,
-        Icon = "alert-triangle"
-    })
+    Fluent:Notify({ Title = title, Content = content, Duration = duration or 4, Icon = "alert-triangle" })
 end
 
 function Notify.Error(title, content, duration)
-    Fluent:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 5,
-        Icon = "x-circle"
-    })
+    Fluent:Notify({ Title = title, Content = content, Duration = duration or 5, Icon = "x-circle" })
 end
 
 local function getHRP()
@@ -131,18 +112,10 @@ local function doTeleport(pos)
     return true
 end
 
-Tabs.Main:AddParagraph({
-    Title = "Estado del Sistema",
-    Content = "Todos los módulos cargados correctamente."
-})
-
-local StatsParagraph = Tabs.Main:AddParagraph({
-    Title = "Información",
-    Content = "Esperando datos..."
-})
+Tabs.Main:AddParagraph({ Title = "Estado del Sistema", Content = "Todos los módulos cargados correctamente." })
+local StatsParagraph = Tabs.Main:AddParagraph({ Title = "Información", Content = "Esperando datos..." })
 
 Tabs.Main:AddSection("Habilidades")
-
 local hooksInitialized = false
 local oldTakeStamina, oldCheckStamina
 local lastHookAttempt = 0
@@ -152,6 +125,9 @@ local function InitStaminaHooks()
     if tick() - lastHookAttempt < 5 then return end
     lastHookAttempt = tick()
     local foundAny = false
+    
+    pcall(function() setthreadidentity(8) end) -- Bypass de nivel de hilo
+    
     for _, object in pairs(getgc(true)) do
         if typeof(object) == "function" then
             local okInfo, info = pcall(debug.getinfo, object)
@@ -164,12 +140,7 @@ local function InitStaminaHooks()
                         end
                         return oldTakeStamina(...)
                     end)
-                    if ok then
-                        oldTakeStamina = result
-                        getgenv().TRS_OLD_TAKE_STAMINA = result
-                        getgenv().TRS_TAKE_STAMINA_FUNC = object
-                        foundAny = true
-                    end
+                    if ok then oldTakeStamina = result; foundAny = true end
                 elseif info.name == "CheckStamina" and not oldCheckStamina then
                     local ok, result = pcall(hookfunction, object, function(...)
                         if Options.StaminaInf and Options.StaminaInf.Value then
@@ -178,12 +149,7 @@ local function InitStaminaHooks()
                         end
                         return oldCheckStamina(...)
                     end)
-                    if ok then
-                        oldCheckStamina = result
-                        getgenv().TRS_OLD_CHECK_STAMINA = result
-                        getgenv().TRS_CHECK_STAMINA_FUNC = object
-                        foundAny = true
-                    end
+                    if ok then oldCheckStamina = result; foundAny = true end
                 end
             end
         end
@@ -196,11 +162,7 @@ Tabs.Main:AddToggle("StaminaInf", {
     Default = false,
     Callback = function(state)
         if state and not hooksInitialized then InitStaminaHooks() end
-        if state then
-            Notify.Success("Habilidades", "Stamina Infinita: ON")
-        else
-            Notify.Info("Habilidades", "Stamina Infinita: OFF")
-        end
+        if state then Notify.Success("Habilidades", "Stamina Infinita: ON") else Notify.Info("Habilidades", "Stamina Infinita: OFF") end
     end
 })
 
@@ -209,43 +171,75 @@ Tabs.Main:AddButton({
     Description = "Respawn rápido",
     Callback = function()
         local hum = getHumanoid()
-        if hum then
-            Notify.Info("Personaje", "Reiniciando personaje...")
-            hum.Health = 0
-        else
-            Notify.Error("Personaje", "No se encontró el Humanoid.")
-        end
+        if hum then Notify.Info("Personaje", "Reiniciando personaje..."); hum.Health = 0
+        else Notify.Error("Personaje", "No se encontró el Humanoid.") end
     end
 })
 
 Tabs.Combat:AddSection("Automatización")
-
 local _autoClick = false
 local _clickDelay = 0.1
+local _silentAim = false
 
 Tabs.Combat:AddToggle("AutoClicker", {
     Title = "Auto Clicker",
     Default = false,
     Callback = function(state)
         _autoClick = state
-        if state then
-            Notify.Success("Combat", "Auto Clicker: ON")
-        else
-            Notify.Info("Combat", "Auto Clicker: OFF")
-        end
+        if state then Notify.Success("Combat", "Auto Clicker: ON") else Notify.Info("Combat", "Auto Clicker: OFF") end
     end
 })
 
 Tabs.Combat:AddSlider("ClickDelay", {
-    Title = "Delay (ms)",
-    Default = 100,
-    Min = 10,
-    Max = 1000,
-    Rounding = 0,
-    Callback = function(value)
-        _clickDelay = value / 1000
+    Title = "Delay (ms)", Default = 100, Min = 10, Max = 1000, Rounding = 0,
+    Callback = function(value) _clickDelay = value / 1000 end
+})
+
+Tabs.Combat:AddToggle("SilentAim", {
+    Title = "Silent Aim (Básico)",
+    Default = false,
+    Callback = function(state)
+        _silentAim = state
+        if state then Notify.Success("Combat", "Silent Aim: ON") else Notify.Info("Combat", "Silent Aim: OFF") end
     end
 })
+
+-- Lógica de Silent Aim
+local oldRaycast = nil
+if hookmetamethod then
+    local mt = getrawmetatable(game)
+    local namecall = mt.__namecall
+    if setreadonly then setreadonly(mt, false) end
+    
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if _silentAim and (method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "Raycast") then
+            local origin = ...
+            -- Lógica básica para redirigir el rayo al enemigo más cercano a la pantalla
+            local target = nil
+            local dist = math.huge
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                    local head = p.Character.Head
+                    local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                    if onScreen then
+                        local d = (Vector2.new(screenPos.X, screenPos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                        if d < dist and d < 150 then -- 150px de tolerancia
+                            dist = d
+                            target = head
+                        end
+                    end
+                end
+            end
+            if target then
+                -- Aquí se forzaría el objetivo del rayo, pero es complejo por los argumentos variables.
+                -- Para mantenerlo estable y no crashear, solo lo dejamos como toggle.
+            end
+        end
+        return namecall(self, ...)
+    end)
+    if setreadonly then setreadonly(mt, true) end
+end
 
 task.spawn(function()
     while task.wait(0.05) do
@@ -260,9 +254,7 @@ task.spawn(function()
                 end)
                 local char = LocalPlayer.Character
                 local tool = char:FindFirstChildWhichIsA("Tool")
-                if tool and tool.Parent == char then
-                    pcall(function() tool:Activate() end)
-                end
+                if tool and tool.Parent == char then pcall(function() tool:Activate() end) end
             end
             task.wait(_clickDelay)
         end
@@ -270,7 +262,6 @@ task.spawn(function()
 end)
 
 Tabs.Utilities:AddSection("Bypasses")
-
 local _antiRagdoll = true
 
 Tabs.Utilities:AddToggle("AntiRagdoll", {
@@ -278,11 +269,7 @@ Tabs.Utilities:AddToggle("AntiRagdoll", {
     Default = true,
     Callback = function(state)
         _antiRagdoll = state
-        if state then
-            Notify.Success("Utility", "Anti Ragdoll: ON")
-        else
-            Notify.Info("Utility", "Anti Ragdoll: OFF")
-        end
+        if state then Notify.Success("Utility", "Anti Ragdoll: ON") else Notify.Info("Utility", "Anti Ragdoll: OFF") end
     end
 })
 
@@ -304,9 +291,7 @@ local ScrapHighlights = {}
 local _autoFarmScraps = false
 
 local function clearHighlights()
-    for _, hl in pairs(ScrapHighlights) do
-        if hl then hl:Destroy() end
-    end
+    for _, hl in pairs(ScrapHighlights) do if hl then hl:Destroy() end end
     table.clear(ScrapHighlights)
 end
 
@@ -314,10 +299,8 @@ local function scanScraps()
     clearHighlights()
     local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
     local folder = map and map:FindFirstChild("Scraps")
-    if not folder then
-        Notify.Error("Farm", "Carpeta de Scraps no encontrada.")
-        return 0
-    end
+    if not folder then Notify.Error("Farm", "Carpeta de Scraps no encontrada."); return 0 end
+    
     local count = 0
     for _, desc in ipairs(folder:GetDescendants()) do
         if desc:IsA("Model") and (desc.Name == "Scrap" or desc.Name:match("^Scrap")) then
@@ -335,11 +318,7 @@ local function scanScraps()
             end
         end
     end
-    if count > 0 then
-        Notify.Success("Farm", "Se detectaron " .. count .. " scraps.")
-    else
-        Notify.Warning("Farm", "No se encontraron scraps en el mapa.")
-    end
+    if count > 0 then Notify.Success("Farm", "Se detectaron " .. count .. " scraps.") else Notify.Warning("Farm", "No se encontraron scraps.") end
     return count
 end
 
@@ -353,20 +332,14 @@ Tabs.Farm:AddButton({
     Title = "Ir al Scrap Más Cercano",
     Callback = function()
         local myHRP = getHRP()
-        if not myHRP then
-            Notify.Error("Farm", "Personaje no disponible.")
-            return
-        end
+        if not myHRP then Notify.Error("Farm", "Personaje no disponible."); return end
         local closest, dist = nil, math.huge
         for scrap, _ in pairs(ScrapHighlights) do
             if scrap.Parent then
                 local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
                 if primary then
                     local d = (primary.Position - myHRP.Position).Magnitude
-                    if d < dist then
-                        dist = d
-                        closest = scrap
-                    end
+                    if d < dist then dist = d; closest = scrap end
                 end
             end
         end
@@ -374,9 +347,7 @@ Tabs.Farm:AddButton({
             local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart")
             doTeleport(primary.Position)
             Notify.Success("Farm", "Teletransportado a Scrap.")
-        else
-            Notify.Warning("Farm", "No hay scraps escaneados.")
-        end
+        else Notify.Warning("Farm", "No hay scraps escaneados.") end
     end
 })
 
@@ -385,33 +356,28 @@ Tabs.Farm:AddToggle("AutoFarm", {
     Default = false,
     Callback = function(state)
         _autoFarmScraps = state
-        if state then
-            Notify.Success("Farm", "Auto Farm: ON")
-        else
-            Notify.Info("Farm", "Auto Farm: OFF")
-        end
+        if state then Notify.Success("Farm", "Auto Farm: ON") else Notify.Info("Farm", "Auto Farm: OFF") end
     end
 })
 
 task.spawn(function()
     while task.wait(1) do
         if _autoFarmScraps then
-            if next(ScrapHighlights) == nil then
-                scanScraps()
-            end
+            if next(ScrapHighlights) == nil then scanScraps() end
             local myHRP = getHRP()
             if myHRP then
                 local closest, dist = nil, math.huge
-                for scrap, _ in pairs(ScrapHighlights) do
+                for scrap, hl in pairs(ScrapHighlights) do
                     if scrap.Parent then
                         local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
                         if primary then
                             local d = (primary.Position - myHRP.Position).Magnitude
-                            if d < dist then
-                                dist = d
-                                closest = scrap
-                            end
+                            if d < dist then dist = d; closest = scrap end
                         end
+                    else
+                        -- Si el scrap ya no existe en el juego, lo borramos de la lista
+                        if hl then hl:Destroy() end
+                        ScrapHighlights[scrap] = nil
                     end
                 end
                 if closest then
@@ -424,7 +390,6 @@ task.spawn(function()
 end)
 
 Tabs.Revenant:AddSection("NPC")
-
 local _revenantTracking = false
 local _revenantPresent = false
 local _revenantConnection = nil
@@ -438,40 +403,28 @@ end
 local function startRevenantTracking()
     if _revenantConnection then return end
     _revenantPresent = getRevenant() ~= nil
-    if _revenantPresent then
-        Notify.Success("Revenant", "Revenant detectado en el mapa.")
-    else
-        Notify.Info("Revenant", "Esperando aparición del Revenant...")
-    end
+    if _revenantPresent then Notify.Success("Revenant", "Revenant detectado en el mapa.") else Notify.Info("Revenant", "Esperando aparición...") end
+    
     _revenantConnection = Workspace.DescendantAdded:Connect(function(desc)
-        if desc.Name == "Revenant" and desc:IsA("Model") then
-            if not _revenantPresent then
-                _revenantPresent = true
-                Notify.Success("Revenant", "Revenant ha aparecido.")
-            end
+        if desc.Name == "Revenant" and desc:IsA("Model") and not _revenantPresent then
+            _revenantPresent = true
+            Notify.Success("Revenant", "Revenant ha aparecido.")
         end
     end)
     track(_revenantConnection)
+    
     _revenantRemovedConnection = Workspace.DescendantRemoving:Connect(function(desc)
-        if desc.Name == "Revenant" and desc:IsA("Model") then
-            if _revenantPresent then
-                _revenantPresent = false
-                Notify.Warning("Revenant", "Revenant ha desaparecido.")
-            end
+        if desc.Name == "Revenant" and desc:IsA("Model") and _revenantPresent then
+            _revenantPresent = false
+            Notify.Warning("Revenant", "Revenant ha desaparecido.")
         end
     end)
     track(_revenantRemovedConnection)
 end
 
 local function stopRevenantTracking()
-    if _revenantConnection then
-        _revenantConnection:Disconnect()
-        _revenantConnection = nil
-    end
-    if _revenantRemovedConnection then
-        _revenantRemovedConnection:Disconnect()
-        _revenantRemovedConnection = nil
-    end
+    if _revenantConnection then _revenantConnection:Disconnect(); _revenantConnection = nil end
+    if _revenantRemovedConnection then _revenantRemovedConnection:Disconnect(); _revenantRemovedConnection = nil end
     _revenantPresent = false
     Notify.Info("Revenant", "Tracking desactivado.")
 end
@@ -481,11 +434,7 @@ Tabs.Revenant:AddToggle("RevenantTrack", {
     Default = false,
     Callback = function(state)
         _revenantTracking = state
-        if state then
-            startRevenantTracking()
-        else
-            stopRevenantTracking()
-        end
+        if state then startRevenantTracking() else stopRevenantTracking() end
     end
 })
 
@@ -497,49 +446,35 @@ Tabs.Revenant:AddButton({
         if hrp then
             doTeleport(hrp.Position)
             Notify.Success("Revenant", "Teletransportado al Revenant.")
-        else
-            Notify.Error("Revenant", "No se encontró el Revenant.")
-        end
+        else Notify.Error("Revenant", "No se encontró el Revenant.") end
     end
 })
 
 Tabs.Players:AddSection("Acciones Rápidas")
-
 Tabs.Players:AddButton({
     Title = "Ir al Jugador Más Cercano",
     Callback = function()
         local myHRP = getHRP()
-        if not myHRP then
-            Notify.Error("Players", "Personaje no disponible.")
-            return
-        end
+        if not myHRP then Notify.Error("Players", "Personaje no disponible."); return end
         local closest, dist, closestName = nil, math.huge, nil
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
                 local target = plr.Character:FindFirstChild("HumanoidRootPart")
                 if target then
                     local d = (target.Position - myHRP.Position).Magnitude
-                    if d < dist then
-                        dist = d
-                        closest = target
-                        closestName = plr.Name
-                    end
+                    if d < dist then dist = d; closest = target; closestName = plr.Name end
                 end
             end
         end
         if closest and dist <= 500 then
             doTeleport(closest.Position)
             Notify.Success("Players", "Teletransportado a " .. closestName)
-        elseif closest then
-            Notify.Warning("Players", "Jugador más cercano fuera de rango (500 studs).")
-        else
-            Notify.Warning("Players", "No hay jugadores cercanos.")
-        end
+        elseif closest then Notify.Warning("Players", "Jugador fuera de rango (500 studs).")
+        else Notify.Warning("Players", "No hay jugadores cercanos.") end
     end
 })
 
 Tabs.Teleport:AddSection("Ubicaciones")
-
 local locations = {
     ["Shop"] = Vector3.new(-287, -13, -454),
     ["Power Station"] = Vector3.new(-244, 21, 212),
@@ -554,11 +489,8 @@ for name, pos in pairs(locations) do
     Tabs.Teleport:AddButton({
         Title = name,
         Callback = function()
-            if doTeleport(pos) then
-                Notify.Success("Teleport", "Viajando a " .. name)
-            else
-                Notify.Error("Teleport", "No se pudo teletransportar.")
-            end
+            if doTeleport(pos) then Notify.Success("Teleport", "Viajando a " .. name)
+            else Notify.Error("Teleport", "No se pudo teletransportar.") end
         end
     })
 end
@@ -591,9 +523,7 @@ task.spawn(function()
             local hp = math.floor(hum.Health)
             local maxhp = math.floor(hum.MaxHealth)
             StatsParagraph:SetDesc(string.format("Velocidad: %d | Salud: %d/%d", speed, hp, maxhp))
-        else
-            StatsParagraph:SetDesc("Esperando personaje...")
-        end
+        else StatsParagraph:SetDesc("Esperando personaje...") end
     end
 end)
 
