@@ -14,6 +14,7 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
+local Lighting = game:GetService("Lighting")
 
 local okFluent, Fluent = pcall(function()
     return loadstring(game:HttpGetAsync("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -67,10 +68,11 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
     Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
     Players = Window:AddTab({ Title = "Players", Icon = "users" }),
-    Farm = Window:AddTab({ Title = "Farm", Icon = "pickaxe" }),
+    Farm = Window:AddTab({ Title = "Farm", Icon = "shovel" }), -- Ícono arreglado
     Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map-pin" }),
     Utilities = Window:AddTab({ Title = "Utilities", Icon = "wrench" }),
+    Optimization = Window:AddTab({ Title = "Optimization", Icon = "zap" }), -- Nueva Pestaña
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -345,6 +347,7 @@ local _revenantTracking = false
 local _revenantPresent = false
 local _revenantConnection = nil
 local _revenantRemovedConnection = nil
+local _revenantHighlight = nil
 
 local function getRevenant()
     local npcs = Workspace:FindFirstChild("NPCs")
@@ -353,13 +356,37 @@ end
 
 local function startRevenantTracking()
     if _revenantConnection then return end
-    _revenantPresent = getRevenant() ~= nil
-    if _revenantPresent then Notify.Success("Revenant", "Revenant detectado en el mapa.") else Notify.Info("Revenant", "Esperando aparición...") end
+    local rev = getRevenant()
+    _revenantPresent = rev ~= nil
+    
+    if _revenantPresent then 
+        Notify.Success("Revenant", "Revenant detectado. Highlight activado.")
+        if not _revenantHighlight then
+            _revenantHighlight = Instance.new("Highlight")
+            _revenantHighlight.FillColor = Color3.fromRGB(255, 0, 0)
+            _revenantHighlight.FillTransparency = 0.5
+            _revenantHighlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+            _revenantHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            _revenantHighlight.Adornee = rev
+            _revenantHighlight.Parent = rev
+        end
+    else 
+        Notify.Info("Revenant", "Esperando aparición...") 
+    end
     
     _revenantConnection = Workspace.DescendantAdded:Connect(function(desc)
         if desc.Name == "Revenant" and desc:IsA("Model") and not _revenantPresent then
             _revenantPresent = true
-            Notify.Success("Revenant", "Revenant ha aparecido.")
+            Notify.Success("Revenant", "Revenant ha aparecido. Highlight activado.")
+            if not _revenantHighlight then
+                _revenantHighlight = Instance.new("Highlight")
+                _revenantHighlight.FillColor = Color3.fromRGB(255, 0, 0)
+                _revenantHighlight.FillTransparency = 0.5
+                _revenantHighlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+                _revenantHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                _revenantHighlight.Adornee = desc
+                _revenantHighlight.Parent = desc
+            end
         end
     end)
     track(_revenantConnection)
@@ -367,6 +394,7 @@ local function startRevenantTracking()
     _revenantRemovedConnection = Workspace.DescendantRemoving:Connect(function(desc)
         if desc.Name == "Revenant" and desc:IsA("Model") and _revenantPresent then
             _revenantPresent = false
+            _revenantHighlight = nil
             Notify.Warning("Revenant", "Revenant ha desaparecido.")
         end
     end)
@@ -376,12 +404,13 @@ end
 local function stopRevenantTracking()
     if _revenantConnection then _revenantConnection:Disconnect(); _revenantConnection = nil end
     if _revenantRemovedConnection then _revenantRemovedConnection:Disconnect(); _revenantRemovedConnection = nil end
+    if _revenantHighlight then _revenantHighlight:Destroy(); _revenantHighlight = nil end
     _revenantPresent = false
-    Notify.Info("Revenant", "Tracking desactivado.")
+    Notify.Info("Revenant", "Tracking y Highlight desactivados.")
 end
 
 Tabs.Revenant:AddToggle("RevenantTrack", {
-    Title = "Trackear Revenant",
+    Title = "Trackear Revenant (Highlight)",
     Default = false,
     Callback = function(state)
         _revenantTracking = state
@@ -445,6 +474,78 @@ for name, pos in pairs(locations) do
         end
     })
 end
+
+Tabs.Optimization:AddSection("Rendimiento Global")
+Tabs.Optimization:AddToggle("OptLighting", {
+    Title = "Desactivar Sombras y Luces",
+    Default = false,
+    Callback = function(state)
+        if state then
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+            Lighting.Brightness = 2
+            for _, v in pairs(Lighting:GetDescendants()) do
+                if v:IsA("PostEffect") or v:IsA("Sky") then v.Enabled = false end
+            end
+            Notify.Success("Optimization", "Luces y sombras desactivadas.")
+        else
+            Lighting.GlobalShadows = true
+            Lighting.FogEnd = 100000
+            Lighting.Brightness = 1
+            Notify.Info("Optimization", "Luces restauradas.")
+        end
+    end
+})
+
+Tabs.Optimization:AddToggle("OptTextures", {
+    Title = "Quitar Texturas de Mapa",
+    Default = false,
+    Callback = function(state)
+        if state then
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("Decal") or v:IsA("Texture") then v.Transparency = 1 end
+            end
+            Notify.Success("Optimization", "Texturas ocultas.")
+        else
+            Notify.Info("Optimization", "Las texturas volverán al reiniciar o cambiar de mapa.")
+        end
+    end
+})
+
+Tabs.Optimization:AddToggle("OptParticles", {
+    Title = "Quitar Partículas",
+    Default = false,
+    Callback = function(state)
+        if state then
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                    v.Enabled = false
+                end
+            end
+            Notify.Success("Optimization", "Partículas y humo desactivados.")
+        end
+    end
+})
+
+Tabs.Optimization:AddButton({
+    Title = "Destruir Efectos Cercanos",
+    Description = "Borrapartículas a tu alrededor",
+    Callback = function()
+        local hrp = getHRP()
+        if hrp then
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") then
+                    if v.Parent and v.Parent:IsA("BasePart") then
+                        if (v.Parent.Position - hrp.Position).Magnitude < 150 then
+                            v:Destroy()
+                        end
+                    end
+                end
+            end
+            Notify.Success("Optimization", "Efectos cercanos destruidos.")
+        end
+    end
+})
 
 if SaveManager and InterfaceManager then
     pcall(function()
