@@ -32,7 +32,9 @@ local Window = Fluent:CreateWindow({
     Size = UDim2.fromOffset(600, 480),
     Acrylic = false,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
+    MinimizeKey = Enum.KeyCode.LeftControl,
+    LoadingTitle = "TRS Panel",
+    LoadingSubtitle = "Cargando preferencias y módulos..."
 })
 
 local Tabs = {
@@ -171,8 +173,12 @@ task.spawn(function()
                     task.wait(0.01)
                     VirtualUser:Button1Up(Vector2.new(center.X, center.Y), cam.CFrame)
                 end)
-                local tool = LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-                if tool then pcall(function() tool:Activate() end) end
+                
+                local char = LocalPlayer.Character
+                local tool = char:FindFirstChildWhichIsA("Tool")
+                if tool and tool.Parent == char then 
+                    pcall(function() tool:Activate() end) 
+                end
             end
         end
     end
@@ -203,7 +209,6 @@ task.spawn(function()
 end)
 
 local ScrapHighlights = {}
-local _farmLoop = false
 local _autoFarmScraps = false
 
 local function clearHighlights()
@@ -383,8 +388,11 @@ SaveManager:SetFolder("TRS_Panel/Configs")
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
-Window:SelectTab(1)
-notify("TRS Panel", "Sistema inicializado correctamente.", 4)
+task.spawn(function()
+    task.wait(1.5)
+    Window:SelectTab(1)
+    notify("TRS Panel", "Sistema inicializado correctamente.", 4)
+end)
 
 task.spawn(function()
     while task.wait(1) do
