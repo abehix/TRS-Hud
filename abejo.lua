@@ -1,9 +1,3 @@
---[[
-    Abejo HUD v8 - Fluent UI Edition
-    Loader: loadstring(game:HttpGet("https://raw.githubusercontent.com/TU_USER/TU_REPO/main/abejo.lua"))()
-]]
-
--- Servicios
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -11,95 +5,85 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 
--- Cargar Fluent (UI Library)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Crear Ventana (estilo como la captura)
+local Connections = setmetatable({}, { __mode = "k" })
+local function track(conn)
+    if conn then Connections[conn] = true end
+    return conn
+end
+
+local function disconnectAll()
+    for conn in pairs(Connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    Connections = setmetatable({}, { __mode = "k" })
+end
+
 local Window = Fluent:CreateWindow({
-    Title = "Abejo HUD",
-    SubTitle = "Advanced Panel · v8",
+    Title = "TRS Panel",
+    SubTitle = "v9.0 Premium",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
+    Size = UDim2.fromOffset(600, 480),
+    Acrylic = false,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- Tabs (Pestañas laterales)
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
+    Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
     Players = Window:AddTab({ Title = "Players", Icon = "users" }),
-    Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
-    Utilities = Window:AddTab({ Title = "Utilities", Icon = "settings" }),
     Farm = Window:AddTab({ Title = "Farm", Icon = "pickaxe" }),
+    Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map-pin" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
-local Options = Fluent.Options
-
--- ==========================================
--- FUNCIONES AUXILIARES (Igual que tu script)
--- ==========================================
 local function getHRP()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
 end
 
 local function getHumanoid()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChildOfClass("Humanoid")
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChildOfClass("Humanoid")
 end
 
-local function doTeleport(cframe)
+local function doTeleport(pos)
     local hrp = getHRP()
-    if hrp then
-        hrp.CFrame = cframe
+    if hrp and pos then
+        hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
         return true
     end
     return false
 end
 
--- Notificación de Fluent (reemplaza tu función notify custom)
 local function notify(title, content, duration)
     Fluent:Notify({
         Title = title,
         Content = content,
-        Duration = duration or 4
+        Duration = duration or 3
     })
 end
 
--- ==========================================
--- TAB: MAIN (Dashboard)
--- ==========================================
 Tabs.Main:AddParagraph({
-    Title = "Resumen de Sesión",
-    Content = "Estado actual de tu personaje y estadísticas."
+    Title = "Estado del Sistema",
+    Content = "Todos los módulos cargados correctamente."
 })
 
--- Aquí irían los toggles/botones principales de tu Dashboard
--- Ejemplo: Speed / DDT (requiere loop para actualizar labels, Fluent no tiene stat cards nativos, usamos Paragraph o Toggles)
-
-Tabs.Main:AddToggle("ToggleSpeed", {
-    Title = "Mostrar Velocidad",
-    Default = false,
-    Callback = function(state)
-        -- Lógica para mostrar velocidad si es necesario
-    end
+local StatsParagraph = Tabs.Main:AddParagraph({
+    Title = "Información",
+    Content = "Esperando datos..."
 })
 
--- ==========================================
--- TAB: YOU (Habilidades / Player)
--- ==========================================
 Tabs.Main:AddSection("Habilidades")
 
--- Stamina Infinita (Lógica original)
-_G.Abejo_StaminaEnabled = false
 local hooksInitialized = false
 local oldTakeStamina, oldCheckStamina
 local lastHookAttempt = 0
@@ -115,9 +99,8 @@ local function InitStaminaHooks()
             if okInfo and info then
                 if info.name == "TakeStamina" and not oldTakeStamina then
                     oldTakeStamina = hookfunction(object, function(...)
-                        if _G.Abejo_StaminaEnabled then
-                            local char = LocalPlayer.Character
-                            local hum = char and char:FindFirstChildOfClass("Humanoid")
+                        if Options.StaminaInf.Value then
+                            local hum = getHumanoid()
                             if hum and hum.Health > 0 then return end
                         end
                         return oldTakeStamina(...)
@@ -125,9 +108,8 @@ local function InitStaminaHooks()
                     foundAny = true
                 elseif info.name == "CheckStamina" and not oldCheckStamina then
                     oldCheckStamina = hookfunction(object, function(...)
-                        if _G.Abejo_StaminaEnabled then
-                            local char = LocalPlayer.Character
-                            local hum = char and char:FindFirstChildOfClass("Humanoid")
+                        if Options.StaminaInf.Value then
+                            local hum = getHumanoid()
                             if hum and hum.Health > 0 then return true end
                         end
                         return oldCheckStamina(...)
@@ -144,248 +126,288 @@ Tabs.Main:AddToggle("StaminaInf", {
     Title = "Stamina Infinita",
     Default = false,
     Callback = function(state)
-        _G.Abejo_StaminaEnabled = state
         if state and not hooksInitialized then InitStaminaHooks() end
-        notify("Stamina Infinita", state and "ON" or "OFF")
+        notify("Habilidades", "Stamina: " .. (state and "ON" or "OFF"))
     end
 })
 
--- Auto Clicker
-_G.Abejo_AutoClicker = false
-_G.Abejo_AutoClickerDelay = 0.1
+Tabs.Main:AddButton({
+    Title = "Reiniciar Personaje",
+    Description = "Respawn rápido",
+    Callback = function()
+        local hum = getHumanoid()
+        if hum then hum.Health = 0 end
+    end
+})
 
-Tabs.Main:AddToggle("AutoClicker", {
+Tabs.Combat:AddSection("Automatización")
+local _autoClick = false
+local _clickDelay = 0.1
+
+Tabs.Combat:AddToggle("AutoClicker", {
     Title = "Auto Clicker",
     Default = false,
-    Callback = function(state)
-        _G.Abejo_AutoClicker = state
-        notify("Auto Clicker", state and "ON" or "OFF")
-    end
+    Callback = function(state) _autoClick = state end
 })
 
-Tabs.Main:AddSlider("AutoClickerDelay", {
-    Title = "Retardo Auto Clicker (ms)",
+Tabs.Combat:AddSlider("ClickDelay", {
+    Title = "Delay (ms)",
     Default = 100,
     Min = 10,
     Max = 1000,
     Rounding = 0,
-    Callback = function(value)
-        _G.Abejo_AutoClickerDelay = value / 1000
-    end
+    Callback = function(value) _clickDelay = value / 1000 end
 })
 
--- Loop Auto Clicker
 task.spawn(function()
     while true do
-        local delay = _G.Abejo_AutoClickerDelay or 0.1
-        task.wait(delay)
-        if _G.Abejo_AutoClicker then
+        task.wait(_clickDelay)
+        if _autoClick and LocalPlayer.Character then
             local cam = workspace.CurrentCamera
             if cam then
                 local center = cam.ViewportSize / 2
                 pcall(function()
                     VirtualUser:Button1Down(Vector2.new(center.X, center.Y), cam.CFrame)
-                    task.wait(0.02)
+                    task.wait(0.01)
                     VirtualUser:Button1Up(Vector2.new(center.X, center.Y), cam.CFrame)
+                end)
+                local tool = LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
+                if tool then pcall(function() tool:Activate() end) end
+            end
+        end
+    end
+end)
+
+Tabs.Utilities:AddSection("Bypasses")
+Tabs.Utilities:AddToggle("AntiRagdoll", {
+    Title = "Anti Ragdoll",
+    Default = true,
+    Callback = function(state)
+        notify("Utility", "Anti Ragdoll: " .. (state and "ON" or "OFF"))
+    end
+})
+
+local _antiRagdoll = true
+task.spawn(function()
+    while task.wait(0.5) do
+        if _antiRagdoll and LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                pcall(function()
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
                 end)
             end
         end
     end
 end)
 
-Tabs.Main:AddButton({
-    Title = "Reiniciar Personaje",
-    Description = "Mata a tu personaje para respawnear",
+local ScrapHighlights = {}
+local _farmLoop = false
+local _autoFarmScraps = false
+
+local function clearHighlights()
+    for scrap, hl in pairs(ScrapHighlights) do
+        if hl and hl.Parent then hl:Destroy() end
+    end
+    table.clear(ScrapHighlights)
+end
+
+local function scanScraps()
+    clearHighlights()
+    local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
+    local folder = map and map:FindFirstChild("Scraps")
+    
+    if not folder then
+        notify("Farm", "Carpeta de Scraps no encontrada.", 4)
+        return 0
+    end
+
+    local count = 0
+    for _, desc in ipairs(folder:GetDescendants()) do
+        if desc:IsA("Model") and (desc.Name == "Scrap" or desc.Name:match("^Scrap")) then
+            local primary = desc.PrimaryPart or desc:FindFirstChildWhichIsA("BasePart")
+            if primary then
+                local hl = Instance.new("Highlight")
+                hl.FillColor = Color3.fromRGB(255, 170, 0)
+                hl.FillTransparency = 0.5
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                hl.Adornee = desc
+                hl.Parent = desc
+                ScrapHighlights[desc] = hl
+                count = count + 1
+            end
+        end
+    end
+    notify("Farm", "Se detectaron " .. count .. " scraps.", 3)
+    return count
+end
+
+Tabs.Farm:AddButton({
+    Title = "Escanear Scraps",
+    Description = "Resalta todos los scraps del mapa",
+    Callback = function() scanScraps() end
+})
+
+Tabs.Farm:AddButton({
+    Title = "Ir al Scrap Más Cercano",
     Callback = function()
-        local hum = getHumanoid()
-        if hum then
-            hum.Health = 0
-            notify("Personaje", "Reiniciado")
+        local myHRP = getHRP()
+        if not myHRP then return end
+        local closest, dist = nil, math.huge
+        for scrap, _ in pairs(ScrapHighlights) do
+            if scrap.Parent then
+                local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
+                if primary then
+                    local d = (primary.Position - myHRP.Position).Magnitude
+                    if d < dist then
+                        dist = d
+                        closest = scrap
+                    end
+                end
+            end
+        end
+        if closest then
+            local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart")
+            doTeleport(primary.Position)
+            notify("Farm", "Teletransportado a Scrap.", 2)
+        else
+            notify("Farm", "No hay scraps escaneados.", 3)
         end
     end
 })
 
--- ==========================================
--- TAB: UTILITIES
--- ==========================================
-Tabs.Utilities:AddSection("Bypasses")
-
--- Anti Ragdoll
-_G.Abejo_AntiRagdoll = true
-Tabs.Utilities:AddToggle("AntiRagdoll", {
-    Title = "Anti Ragdoll",
-    Default = true,
-    Callback = function(state)
-        _G.Abejo_AntiRagdoll = state
-        notify("Anti Ragdoll", state and "ON" or "OFF")
-    end
-})
-
--- Anti Barrera (Alambre)
-_G.Abejo_AntiBarrier = false
-Tabs.Utilities:AddToggle("AntiBarrier", {
-    Title = "Anti Barrera (Alambre)",
+Tabs.Farm:AddToggle("AutoFarm", {
+    Title = "Auto Farm (Teletransporte)",
     Default = false,
-    Callback = function(state)
-        _G.Abejo_AntiBarrier = state
-        notify("Anti Barrera", state and "ON" or "OFF")
+    Callback = function(state) _autoFarmScraps = state end
+})
+
+task.spawn(function()
+    while task.wait(1) do
+        if _autoFarmScraps then
+            local myHRP = getHRP()
+            if myHRP then
+                local closest, dist = nil, math.huge
+                for scrap, _ in pairs(ScrapHighlights) do
+                    if scrap.Parent then
+                        local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
+                        if primary then
+                            local d = (primary.Position - myHRP.Position).Magnitude
+                            if d < dist then
+                                dist = d
+                                closest = scrap
+                            end
+                        end
+                    end
+                end
+                if closest then
+                    local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart")
+                    doTeleport(primary.Position)
+                end
+            end
+        end
+    end
+end)
+
+Tabs.Revenant:AddSection("NPC")
+Tabs.Revenant:AddButton({
+    Title = "Ir al Revenant",
+    Callback = function()
+        local npcs = Workspace:FindFirstChild("NPCs")
+        local rev = npcs and npcs:FindFirstChild("Revenant")
+        local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            doTeleport(hrp.Position)
+        else
+            notify("Revenant", "No se encontró.", 3)
+        end
     end
 })
 
--- ==========================================
--- TAB: TELEPORT
--- ==========================================
-Tabs.Teleport:AddSection("Viaje Rápido")
+Tabs.Players:AddSection("Acciones Rápidas")
+Tabs.Players:AddButton({
+    Title = "Ir al Jugador Más Cercano",
+    Callback = function()
+        local myHRP = getHRP()
+        if not myHRP then return end
+        local closest, dist = nil, math.huge
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local target = plr.Character:FindFirstChild("HumanoidRootPart")
+                if target then
+                    local d = (target.Position - myHRP.Position).Magnitude
+                    if d < dist then
+                        dist = d
+                        closest = target
+                    end
+                end
+            end
+        end
+        if closest then
+            doTeleport(closest.Position)
+        end
+    end
+})
 
+Tabs.Teleport:AddSection("Ubicaciones")
 local locations = {
-    ["Shop"] = CFrame.new(-287.998016, -13.7416973, -454.909027),
-    ["Power Station"] = CFrame.new(-244.704498, 21.5832672, 212.771057),
-    ["Scrap Building"] = CFrame.new(-458.86499, -3.20000076, 23.5130329),
-    ["Bunker Elevator"] = CFrame.new(-97.3507233, -61.6877441, 167.447845),
-    ["Bunker Inside"] = CFrame.new(-137.785004, -112.900253, 359.073578),
-    ["Church"] = CFrame.new(359.619049, 16.1122551, 403.016052),
-    ["Cave"] = CFrame.new(110.269135, 14.3999996, -209.216293),
+    ["Shop"] = Vector3.new(-287, -13, -454),
+    ["Power Station"] = Vector3.new(-244, 21, 212),
+    ["Scrap Building"] = Vector3.new(-458, -3, 23),
+    ["Bunker Elevator"] = Vector3.new(-97, -61, 167),
+    ["Bunker Inside"] = Vector3.new(-137, -112, 359),
+    ["Church"] = Vector3.new(359, 16, 403),
+    ["Cave"] = Vector3.new(110, 14, -209)
 }
 
-for name, cframe in pairs(locations) do
+for name, pos in pairs(locations) do
     Tabs.Teleport:AddButton({
         Title = name,
         Callback = function()
-            if doTeleport(cframe) then
-                notify("Teleport", "Teletransportado a " .. name)
-            else
-                notify("Teleport", "Error: Sin personaje")
+            if doTeleport(pos) then
+                notify("Teleport", "Viajando a " .. name, 2)
             end
         end
     })
 end
 
--- ==========================================
--- TAB: REVENANT
--- ==========================================
-Tabs.Revenant:AddSection("Acciones")
-
-Tabs.Revenant:AddButton({
-    Title = "Teletransportar al Revenant",
-    Callback = function()
-        local npcsFolder = Workspace:FindFirstChild("NPCs")
-        local rev = npcsFolder and npcsFolder:FindFirstChild("Revenant")
-        if rev then
-            local target = rev:FindFirstChild("HumanoidRootPart")
-            if target and doTeleport(target.CFrame + Vector3.new(0, 5, 0)) then
-                notify("Revenant", "Teletransportado")
-            else
-                notify("Revenant", "Sin HumanoidRootPart")
-            end
-        else
-            notify("Revenant", "No encontrado")
-        end
-    end
-})
-
--- ==========================================
--- TAB: PLAYERS (Simplificado para Fluent)
--- ==========================================
--- Fluent no tiene listas dinámicas fáciles, así que usamos un botón que teletransporta al más cercano o un dropdown.
--- Para mantenerlo simple, creamos un botón de "Ir al jugador más cercano".
-
-Tabs.Players:AddSection("Jugadores")
-
-Tabs.Players:AddButton({
-    Title = "Teletransportarse al Jugador Más Cercano",
-    Callback = function()
-        local myHRP = getHRP()
-        if not myHRP then return end
-        
-        local closestPlr, closestDist = nil, math.huge
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                local target = plr.Character:FindFirstChild("HumanoidRootPart")
-                if target then
-                    local dist = (target.Position - myHRP.Position).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestPlr = plr
-                    end
-                end
-            end
-        end
-        
-        if closestPlr and closestPlr.Character then
-            local target = closestPlr.Character:FindFirstChild("HumanoidRootPart")
-            if target then
-                doTeleport(target.CFrame + Vector3.new(0, 3, 0))
-                notify("Players", "Teletransportado a " .. closestPlr.Name)
-            end
-        else
-            notify("Players", "No hay jugadores cercanos")
-        end
-    end
-})
-
--- ==========================================
--- TAB: FARM (Lógica simplificada)
--- ==========================================
-Tabs.Farm:AddSection("Scraps")
-
-Tabs.Farm:AddButton({
-    Title = "Escanear Scraps Cercanos",
-    Callback = function()
-        local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
-        local scrapsFolder = map and map:FindFirstChild("Scraps")
-        if not scrapsFolder then
-            notify("Farm", "Carpeta Scraps no encontrada")
-            return
-        end
-        
-        local count = 0
-        for _, folder in ipairs(scrapsFolder:GetChildren()) do
-            if folder:IsA("Folder") then
-                for _, child in ipairs(folder:GetChildren()) do
-                    if child:IsA("Model") and child.Name:match("^Scrap") then
-                        count = count + 1
-                        -- Crear Highlight simple
-                        local hl = Instance.new("Highlight")
-                        hl.FillColor = Color3.fromRGB(255, 255, 0)
-                        hl.Adornee = child
-                        hl.Parent = child
-                    end
-                end
-            end
-        end
-        notify("Farm", "Encontrados " .. count .. " scraps")
-    end
-})
-
--- ==========================================
--- SETTINGS & SAVE MANAGER
--- ==========================================
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
-
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
-
-InterfaceManager:SetFolder("AbejoHUD")
-SaveManager:SetFolder("AbejoHUD/Configs")
+InterfaceManager:SetFolder("TRS_Panel")
+SaveManager:SetFolder("TRS_Panel/Configs")
 
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
--- Notificación de carga
 Window:SelectTab(1)
-notify("Abejo HUD", "Cargado correctamente. Presiona LeftControl para minimizar.")
+notify("TRS Panel", "Sistema inicializado correctamente.", 4)
 
--- Iniciar watchers de Anti Ragdoll (Lógica original)
 task.spawn(function()
-    while task.wait(0.5) do
-        if _G.Abejo_AntiRagdoll and LocalPlayer.Character then
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                pcall(function()
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                end)
-            end
+    while task.wait(1) do
+        local hum = getHumanoid()
+        local hrp = getHRP()
+        if hum and hrp then
+            local vel = hrp.AssemblyLinearVelocity
+            local speed = math.floor(Vector3.new(vel.X, 0, vel.Z).Magnitude)
+            local hp = math.floor(hum.Health)
+            local maxhp = math.floor(hum.MaxHealth)
+            StatsParagraph:SetDesc(string.format("Velocidad: %d | Salud: %d/%d", speed, hp, maxhp))
+        else
+            StatsParagraph:SetDesc("Esperando personaje...")
         end
     end
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    clearHighlights()
+    _autoFarmScraps = false
+end)
+
+script.Destroying:Connect(function()
+    disconnectAll()
+    clearHighlights()
 end)
