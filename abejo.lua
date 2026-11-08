@@ -14,7 +14,6 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
-local RunService = game:GetService("RunService")
 
 local okFluent, Fluent = pcall(function()
     return loadstring(game:HttpGetAsync("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -126,7 +125,7 @@ local function InitStaminaHooks()
     lastHookAttempt = tick()
     local foundAny = false
     
-    pcall(function() setthreadidentity(8) end) -- Bypass de nivel de hilo
+    pcall(function() setthreadidentity(8) end)
     
     for _, object in pairs(getgc(true)) do
         if typeof(object) == "function" then
@@ -179,7 +178,6 @@ Tabs.Main:AddButton({
 Tabs.Combat:AddSection("Automatización")
 local _autoClick = false
 local _clickDelay = 0.1
-local _silentAim = false
 
 Tabs.Combat:AddToggle("AutoClicker", {
     Title = "Auto Clicker",
@@ -194,52 +192,6 @@ Tabs.Combat:AddSlider("ClickDelay", {
     Title = "Delay (ms)", Default = 100, Min = 10, Max = 1000, Rounding = 0,
     Callback = function(value) _clickDelay = value / 1000 end
 })
-
-Tabs.Combat:AddToggle("SilentAim", {
-    Title = "Silent Aim (Básico)",
-    Default = false,
-    Callback = function(state)
-        _silentAim = state
-        if state then Notify.Success("Combat", "Silent Aim: ON") else Notify.Info("Combat", "Silent Aim: OFF") end
-    end
-})
-
--- Lógica de Silent Aim
-local oldRaycast = nil
-if hookmetamethod then
-    local mt = getrawmetatable(game)
-    local namecall = mt.__namecall
-    if setreadonly then setreadonly(mt, false) end
-    
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if _silentAim and (method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "Raycast") then
-            local origin = ...
-            -- Lógica básica para redirigir el rayo al enemigo más cercano a la pantalla
-            local target = nil
-            local dist = math.huge
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                    local head = p.Character.Head
-                    local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
-                    if onScreen then
-                        local d = (Vector2.new(screenPos.X, screenPos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                        if d < dist and d < 150 then -- 150px de tolerancia
-                            dist = d
-                            target = head
-                        end
-                    end
-                end
-            end
-            if target then
-                -- Aquí se forzaría el objetivo del rayo, pero es complejo por los argumentos variables.
-                -- Para mantenerlo estable y no crashear, solo lo dejamos como toggle.
-            end
-        end
-        return namecall(self, ...)
-    end)
-    if setreadonly then setreadonly(mt, true) end
-end
 
 task.spawn(function()
     while task.wait(0.05) do
@@ -375,7 +327,6 @@ task.spawn(function()
                             if d < dist then dist = d; closest = scrap end
                         end
                     else
-                        -- Si el scrap ya no existe en el juego, lo borramos de la lista
                         if hl then hl:Destroy() end
                         ScrapHighlights[scrap] = nil
                     end
