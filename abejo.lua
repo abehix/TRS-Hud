@@ -1,3 +1,32 @@
+if _G.__TRS_WINDOW then
+    pcall(function() _G.__TRS_WINDOW:Destroy() end)
+    _G.__TRS_WINDOW = nil
+end
+if getgenv().TRS_HOOKS then
+    for _, h in pairs(getgenv().TRS_HOOKS) do
+        pcall(function() h:Disconnect() end)
+    end
+    getgenv().TRS_HOOKS = nil
+end
+if getgenv().TRS_OLD_TAKE_STAMINA then
+    pcall(function()
+        if getgenv().TRS_TAKE_STAMINA_FUNC then
+            hookfunction(getgenv().TRS_TAKE_STAMINA_FUNC, getgenv().TRS_OLD_TAKE_STAMINA)
+        end
+    end)
+    getgenv().TRS_OLD_TAKE_STAMINA = nil
+    getgenv().TRS_TAKE_STAMINA_FUNC = nil
+end
+if getgenv().TRS_OLD_CHECK_STAMINA then
+    pcall(function()
+        if getgenv().TRS_CHECK_STAMINA_FUNC then
+            hookfunction(getgenv().TRS_CHECK_STAMINA_FUNC, getgenv().TRS_OLD_CHECK_STAMINA)
+        end
+    end)
+    getgenv().TRS_OLD_CHECK_STAMINA = nil
+    getgenv().TRS_CHECK_STAMINA_FUNC = nil
+end
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -34,6 +63,8 @@ local Window = Fluent:CreateWindow({
     LoadingTitle = "TRS Panel",
     LoadingSubtitle = "Cargando preferencias y módulos..."
 })
+
+_G.__TRS_WINDOW = Window
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
@@ -138,6 +169,8 @@ local function InitStaminaHooks()
                     end)
                     if ok then
                         oldTakeStamina = result
+                        getgenv().TRS_OLD_TAKE_STAMINA = result
+                        getgenv().TRS_TAKE_STAMINA_FUNC = object
                         foundAny = true
                     end
                 elseif info.name == "CheckStamina" and not oldCheckStamina then
@@ -150,6 +183,8 @@ local function InitStaminaHooks()
                     end)
                     if ok then
                         oldCheckStamina = result
+                        getgenv().TRS_OLD_CHECK_STAMINA = result
+                        getgenv().TRS_CHECK_STAMINA_FUNC = object
                         foundAny = true
                     end
                 end
@@ -396,6 +431,7 @@ Tabs.Revenant:AddSection("NPC")
 local _revenantTracking = false
 local _revenantPresent = false
 local _revenantConnection = nil
+local _revenantRemovedConnection = nil
 
 local function getRevenant()
     local npcs = Workspace:FindFirstChild("NPCs")
@@ -412,24 +448,32 @@ local function startRevenantTracking()
     end
     _revenantConnection = Workspace.DescendantAdded:Connect(function(desc)
         if desc.Name == "Revenant" and desc:IsA("Model") then
-            _revenantPresent = true
-            Notify.Success("Revenant", "Revenant ha aparecido.")
+            if not _revenantPresent then
+                _revenantPresent = true
+                Notify.Success("Revenant", "Revenant ha aparecido.")
+            end
         end
     end)
     track(_revenantConnection)
-    local removedConn = Workspace.DescendantRemoving:Connect(function(desc)
+    _revenantRemovedConnection = Workspace.DescendantRemoving:Connect(function(desc)
         if desc.Name == "Revenant" and desc:IsA("Model") then
-            _revenantPresent = false
-            Notify.Warning("Revenant", "Revenant ha desaparecido.")
+            if _revenantPresent then
+                _revenantPresent = false
+                Notify.Warning("Revenant", "Revenant ha desaparecido.")
+            end
         end
     end)
-    track(removedConn)
+    track(_revenantRemovedConnection)
 end
 
 local function stopRevenantTracking()
     if _revenantConnection then
         _revenantConnection:Disconnect()
         _revenantConnection = nil
+    end
+    if _revenantRemovedConnection then
+        _revenantRemovedConnection:Disconnect()
+        _revenantRemovedConnection = nil
     end
     _revenantPresent = false
     Notify.Info("Revenant", "Tracking desactivado.")
