@@ -209,22 +209,44 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- ADVANCED FARM SYSTEM
+-- ADVANCED FARM SYSTEM (COLOR BASED)
 -- ==========================================
 Tabs.Farm:AddSection("Scrap Detection")
 
-local ScrapClasses = {} -- Stores { [ClassName] = { Color = Color3, Toggle = ToggleObject } }
-local ActiveScraps = {}  -- Stores { [ScrapModel] = { ClassName = string, Highlight = Highlight } }
+local ScrapClasses = {
+    ["Golden"] = { Color = Color3.fromRGB(248, 186, 0) },
+    ["Common"] = { Color = Color3.fromRGB(98, 98, 98) },
+    ["Cursed"] = { Color = Color3.fromRGB(255, 0, 0) },
+    ["Shiny"] = { Color = Color3.fromRGB(66, 63, 65) },
+    ["Exotic"] = { Color = Color3.fromRGB(170, 0, 255) }
+}
+
+local ActiveScraps = {}  
 local _autoFarmScraps = false
 local _autoFarmTarget = "All"
+local CreatedToggles = {}
 
-local function GetRandomColor()
-    local colors = {
-        Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 0, 255),
-        Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 0, 255), Color3.fromRGB(0, 255, 255),
-        Color3.fromRGB(255, 128, 0), Color3.fromRGB(128, 0, 255), Color3.fromRGB(0, 128, 255)
-    }
-    return colors[math.random(1, #colors)]
+local function GetClassFromColor(color)
+    local function Match(c1, c2)
+        return math.abs(c1.R - c2.R) < 0.02 and math.abs(c1.G - c2.G) < 0.02 and math.abs(c1.B - c2.B) < 0.02
+    end
+    
+    if Match(color, ScrapClasses.Golden.Color) then return "Golden" end
+    if Match(color, ScrapClasses.Common.Color) then return "Common" end
+    if Match(color, ScrapClasses.Cursed.Color) then return "Cursed" end
+    if Match(color, ScrapClasses.Shiny.Color) then return "Shiny" end
+    return "Exotic"
+end
+
+local function GetScrapBase(scrap)
+    -- Search for the part named "Base" first, then MeshPart, then PrimaryPart
+    local base = scrap:FindFirstChild("Base") 
+    if base and base:IsA("BasePart") then return base end
+    
+    local mesh = scrap:FindFirstChildWhichIsA("MeshPart")
+    if mesh then return mesh end
+    
+    return scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
 end
 
 local function ClearAllScraps()
@@ -232,10 +254,6 @@ local function ClearAllScraps()
         if data.Highlight then data.Highlight:Destroy() end
     end
     table.clear(ActiveScraps)
-    
-    if Options.ScrapClassDropdown then
-        Options.ScrapClassDropdown:SetValues({"All"})
-    end
 end
 
 local function ToggleScrapHighlight(className, state)
@@ -244,7 +262,11 @@ local function ToggleScrapHighlight(className, state)
             if state then
                 if not data.Highlight or not data.Highlight.Parent then
                     local hl = Instance.new("Highlight")
-                    hl.FillColor = ScrapClasses[className] and ScrapClasses[className].Color or Color3.fromRGB(255, 170, 0)
+                    if className == "Exotic" then
+                        hl.FillColor = Color3.fromHSV(math.random(), 1, 1)
+                    else
+                        hl.FillColor = ScrapClasses[className] and ScrapClasses[className].Color or Color3.fromRGB(255, 255, 255)
+                    end
                     hl.FillTransparency = 0.4
                     hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                     hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
@@ -269,36 +291,22 @@ local function ScanScraps()
     
     if not folder then Notify.Error("Farm", "Scraps folder not found."); return end
     
-    local foundClasses = {}
+    local counts = { Golden = 0, Common = 0, Cursed = 0, Shiny = 0, Exotic = 0 }
     
     for _, desc in ipairs(folder:GetDescendants()) do
         if desc:IsA("Model") and (desc.Name == "Scrap" or desc.Name:match("^Scrap")) then
-            local primary = desc.PrimaryPart or desc:FindFirstChildWhichIsA("BasePart")
-            if primary then
-                -- Determine Class Name (looks for attributes, values, or specific names)
-                local className = "Standard"
-                local typeValue = desc:FindFirstChild("Type") or desc:FindFirstChild("Class") or desc:FindFirstChild("ScrapType")
-                if typeValue and typeValue:IsA("StringValue") then
-                    className = typeValue.Value
-                elseif desc.Name ~= "Scrap" then
-                    className = desc.Name
-                end
-                
+            local basePart = GetScrapBase(desc)
+            if basePart then
+                local className = GetClassFromColor(basePart.Color)
                 ActiveScraps[desc] = { ClassName = className, Highlight = nil }
-                foundClasses[className] = true
+                counts[className] = counts[className] + 1
             end
         end
     end
     
-    local classList = {"All"}
-    for className, _ in pairs(foundClasses) do
-        table.insert(classList, className)
-        
-        if not ScrapClasses[className] then
-            local col = GetRandomColor()
-            ScrapClasses[className] = { Color = col }
-            
-            -- Create specific toggle for this class
+    for className, _ in pairs(ScrapClasses) do
+        if not CreatedToggles[className] then
+            CreatedToggles[className] = true
             Tabs.Farm:AddToggle("HL_" .. className, {
                 Title = "Highlight: " .. className,
                 Default = true,
@@ -306,16 +314,13 @@ local function ScanScraps()
                     ToggleScrapHighlight(className, state)
                 end
             })
-            -- Force initial state on scan
-            ToggleScrapHighlight(className, true)
+        end
+        if Options["HL_" .. className] then
+            ToggleScrapHighlight(className, Options["HL_" .. className].Value)
         end
     end
     
-    if Options.ScrapClassDropdown then
-        Options.ScrapClassDropdown:SetValues(classList)
-    end
-    
-    Notify.Success("Farm", "Scanned " .. #classList - 1 .. " scrap classes.")
+    Notify.Success("Farm", string.format("Scanned: %d Golden, %d Common, %d Cursed, %d Shiny, %d Exotic", counts.Golden, counts.Common, counts.Cursed, counts.Shiny, counts.Exotic))
 end
 
 if Options.ScrapClassDropdown then
@@ -324,7 +329,7 @@ end
 
 local ClassDropdown = Tabs.Farm:AddDropdown("ScrapClassDropdown", {
     Title = "Auto Farm Target Class",
-    Values = {"All"},
+    Values = {"All", "Golden", "Common", "Cursed", "Shiny", "Exotic"},
     Multi = false,
     Default = "All",
     Callback = function(value)
@@ -334,7 +339,7 @@ local ClassDropdown = Tabs.Farm:AddDropdown("ScrapClassDropdown", {
 
 Tabs.Farm:AddButton({
     Title = "Scan & Highlight Scraps",
-    Description = "Detects all scrap types and updates toggles",
+    Description = "Detects scrap colors from 'Base' or MeshParts",
     Callback = function() ScanScraps() end
 })
 
@@ -356,10 +361,10 @@ task.spawn(function()
                 local closest, dist = nil, math.huge
                 for scrap, data in pairs(ActiveScraps) do
                     if scrap.Parent then
-                        local primary = scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
-                        if primary then
+                        local basePart = GetScrapBase(scrap)
+                        if basePart then
                             if _autoFarmTarget == "All" or data.ClassName == _autoFarmTarget then
-                                local d = (primary.Position - myHRP.Position).Magnitude
+                                local d = (basePart.Position - myHRP.Position).Magnitude
                                 if d < dist then dist = d; closest = scrap end
                             end
                         end
@@ -369,8 +374,8 @@ task.spawn(function()
                     end
                 end
                 if closest then
-                    local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart")
-                    doTeleport(primary.Position)
+                    local basePart = GetScrapBase(closest)
+                    if basePart then doTeleport(basePart.Position) end
                 end
             end
         end
@@ -570,7 +575,7 @@ Tabs.Optimization:AddToggle("OptLighting", {
             Lighting.FogEnd = 9e9
             Lighting.Brightness = 2
             for _, v in pairs(Lighting:GetDescendants()) do
-                if v:IsA("PostEffect") or v:IsA("Sky") then v.Enabled = false end
+                if v:IsA("PostEffect") or v:IsA("Sky") then v:Enabled = false end
             end
             Notify.Success("Optimization", "Shadows and lights disabled.")
         else
