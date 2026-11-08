@@ -209,7 +209,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- ADVANCED FARM SYSTEM (COLOR BASED)
+-- ADVANCED FARM SYSTEM (FIXED HIERARCHY)
 -- ==========================================
 Tabs.Farm:AddSection("Scrap Detection")
 
@@ -218,7 +218,7 @@ local ScrapClasses = {
     ["Common"] = { Color = Color3.fromRGB(98, 98, 98) },
     ["Cursed"] = { Color = Color3.fromRGB(255, 0, 0) },
     ["Shiny"] = { Color = Color3.fromRGB(66, 63, 65) },
-    ["Exotic"] = { Color = Color3.fromRGB(170, 0, 255) }
+    ["Exotic"] = { Color = Color3.fromRGB(170, 0, 255) } 
 }
 
 local ActiveScraps = {}  
@@ -236,17 +236,6 @@ local function GetClassFromColor(color)
     if Match(color, ScrapClasses.Cursed.Color) then return "Cursed" end
     if Match(color, ScrapClasses.Shiny.Color) then return "Shiny" end
     return "Exotic"
-end
-
-local function GetScrapBase(scrap)
-    -- Search for the part named "Base" first, then MeshPart, then PrimaryPart
-    local base = scrap:FindFirstChild("Base") 
-    if base and base:IsA("BasePart") then return base end
-    
-    local mesh = scrap:FindFirstChildWhichIsA("MeshPart")
-    if mesh then return mesh end
-    
-    return scrap.PrimaryPart or scrap:FindFirstChildWhichIsA("BasePart")
 end
 
 local function ClearAllScraps()
@@ -286,24 +275,42 @@ end
 
 local function ScanScraps()
     ClearAllScraps()
-    local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
-    local folder = map and map:FindFirstChild("Scraps")
-    
-    if not folder then Notify.Error("Farm", "Scraps folder not found."); return end
-    
     local counts = { Golden = 0, Common = 0, Cursed = 0, Shiny = 0, Exotic = 0 }
+    local found = 0
     
-    for _, desc in ipairs(folder:GetDescendants()) do
-        if desc:IsA("Model") and (desc.Name == "Scrap" or desc.Name:match("^Scrap")) then
-            local basePart = GetScrapBase(desc)
-            if basePart then
-                local className = GetClassFromColor(basePart.Color)
-                ActiveScraps[desc] = { ClassName = className, Highlight = nil }
-                counts[className] = counts[className] + 1
+    -- Navegar por la jerarquía exacta: Workspace -> MAP -> Scraps
+    local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
+    local scrapsFolder = map and map:FindFirstChild("Scraps")
+    
+    if not scrapsFolder then
+        Notify.Error("Farm", "Could not find Workspace.MAP.Scraps")
+        return
+    end
+    
+    -- Iterar por todas las subcarpetas (BigCabin, BrokenBuilding, Bunker, etc.)
+    for _, zoneFolder in ipairs(scrapsFolder:GetChildren()) do
+        -- Buscar cualquier modelo que empiece con "Scrap" dentro de esa zona
+        for _, obj in ipairs(zoneFolder:GetChildren()) do
+            if obj:IsA("Model") and (obj.Name:match("^Scrap") or obj.Name:match("^scrap")) then
+                local basePart = obj:FindFirstChild("Base")
+                if basePart and basePart:IsA("BasePart") then
+                    local color = basePart.Color
+                    local className = GetClassFromColor(color)
+                    
+                    ActiveScraps[obj] = { ClassName = className, Highlight = nil }
+                    counts[className] = counts[className] + 1
+                    found = found + 1
+                end
             end
         end
     end
     
+    if found == 0 then
+        Notify.Warning("Farm", "Found Scraps folder, but no valid Scrap models inside.")
+        return
+    end
+    
+    -- Generar Toggles automáticamente
     for className, _ in pairs(ScrapClasses) do
         if not CreatedToggles[className] then
             CreatedToggles[className] = true
@@ -339,7 +346,7 @@ local ClassDropdown = Tabs.Farm:AddDropdown("ScrapClassDropdown", {
 
 Tabs.Farm:AddButton({
     Title = "Scan & Highlight Scraps",
-    Description = "Detects scrap colors from 'Base' or MeshParts",
+    Description = "Finds and highlights all scraps by color",
     Callback = function() ScanScraps() end
 })
 
@@ -361,7 +368,7 @@ task.spawn(function()
                 local closest, dist = nil, math.huge
                 for scrap, data in pairs(ActiveScraps) do
                     if scrap.Parent then
-                        local basePart = GetScrapBase(scrap)
+                        local basePart = scrap:FindFirstChild("Base")
                         if basePart then
                             if _autoFarmTarget == "All" or data.ClassName == _autoFarmTarget then
                                 local d = (basePart.Position - myHRP.Position).Magnitude
@@ -374,7 +381,7 @@ task.spawn(function()
                     end
                 end
                 if closest then
-                    local basePart = GetScrapBase(closest)
+                    local basePart = closest:FindFirstChild("Base")
                     if basePart then doTeleport(basePart.Position) end
                 end
             end
