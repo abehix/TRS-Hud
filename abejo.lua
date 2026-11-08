@@ -20,7 +20,7 @@ local function safeGet(url)
 end
 
 local FluentSource = safeGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua")
-if not FluentSource then return warn("[TRS] Error cargando UI.") end
+if not FluentSource then return warn("[TRS] Error loading UI.") end
 
 local Fluent = loadstring(FluentSource)()
 local SaveManager = loadstring(safeGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -39,47 +39,51 @@ end
 
 local Translations = {
     EN = {
-        welcome = "Welcome, ", connected = "Connected to Server", executor = "Executor: ",
-        stats = "Live Stats", abilities = "Movement & Speed", loopSpeed = "LoopSpeed",
-        loopSpeedDesc = "Forces WalkSpeed continuously", reset = "Reset Character",
+        welcome = "Welcome, ", connected = "Connected", executor = "Executor: ",
+        stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character",
         vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness",
         combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically",
-        delay = "Delay (ms)", players = "Player Actions", tpClosest = "Teleport to Closest",
+        delay = "Delay (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (Hook)", auraKillDesc = "Requires 1 manual hit first to grab the key",
+        range = "Kill Range (studs)", players = "Player Actions", tpClosest = "Teleport to Closest",
         esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker",
         revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant",
         farm = "Scrap Farming", scan = "Scan Scraps", scanDesc = "Highlights all scraps",
         autoFarm = "Auto Farm", autoFarmDesc = "Teleports to closest scrap", prompts = "Auto Interact",
         promptsDesc = "Opens objects automatically", teleport = "Teleport Locations",
         goTo = "Go to ", util = "Utilities", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK",
-        boost = "FPS Booster Lite", boostDesc = "Clears particles to improve FPS",
+        opti = "Optimization", optiTerrain = "Remove Terrain", optiTerrainDesc = "Removes grass/details",
+        optiMat = "Simplify Materials", optiMatDesc = "SmoothPlastic materials",
+        optiShadow = "Disable Shadows", optiShadowDesc = "Turns off shadows",
         hop = "Server Hop", hopDesc = "Joins a new server", settings = "Settings",
         lang = "Language (Reloads UI)", logs = "Server Logs", hourLog = "Hour Activations",
-        roundLog = "Round Activations", worldLog = "World Events"
+        roundLog = "Round Activations", worldLog = "World Events", sniffer = "Network Sniffer", snifferDesc = "Logs M_MRF events"
     },
     MX = {
-        welcome = "Bienvenido, ", connected = "Conectado al Servidor", executor = "Executor: ",
-        stats = "Estadísticas en Vivo", abilities = "Movimiento y Velocidad", loopSpeed = "LoopSpeed (Velocidad)",
-        loopSpeedDesc = "Fuerza la velocidad continuamente", reset = "Reiniciar Personaje",
+        welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ",
+        stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje",
         vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad",
         combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente",
-        delay = "Retardo (ms)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano",
+        delay = "Retardo (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (Hook)", auraKillDesc = "Requiere 1 golpe manual primero para obtener la llave",
+        range = "Rango de Muerte (studs)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano",
         esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant",
         revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant",
         farm = "Farmeo de Scraps", scan = "Escanear Scraps", scanDesc = "Resalta todos los scraps",
         autoFarm = "Auto Farmear", autoFarmDesc = "Teletransporta al scrap más cercano", prompts = "Auto Interactuar",
         promptsDesc = "Abre objetos automáticamente", teleport = "Puntos de Teletransporte",
         goTo = "Ir a ", util = "Utilidades", antiRag = "Anti Ragdoll", antiAfk = "Anti-AFK",
-        boost = "FPS Booster Lite", boostDesc = "Borra partículas para mejorar FPS",
+        opti = "Optimización", optiTerrain = "Borrar Terreno", optiTerrainDesc = "Quita pasto/detalles",
+        optiMat = "Simplificar Materiales", optiMatDesc = "Materiales SmoothPlastic",
+        optiShadow = "Apagar Sombras", optiShadowDesc = "Desactiva sombras",
         hop = "Server Hop", hopDesc = "Salta a un servidor nuevo", settings = "Ajustes",
         lang = "Idioma (Recarga la UI)", logs = "Registros del Servidor", hourLog = "Horas Activadas",
-        roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo"
+        roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo", sniffer = "Network Sniffer", snifferDesc = "Registra eventos M_MRF"
     }
 }
 local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
-    Title = "The Revenant: Sunrisen [HALLOWS 🎃] - HUD Made By @kyyabe08",
-    SubTitle = "v17.0 Ultimate Pro Edition",
+    Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
+    SubTitle = "v19.0 Ultimate Pro Edition",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -90,6 +94,7 @@ local Window = Fluent:CreateWindow({
 local Tabs = {
     Main = Window:AddTab({ Title = "Dashboard", Icon = "layout-dashboard" }),
     Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
+    Exploits = Window:AddTab({ Title = "Exploits", Icon = "zap" }),
     Players = Window:AddTab({ Title = "Players", Icon = "users" }),
     Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
     Farm = Window:AddTab({ Title = "Farm", Icon = "shovel" }),
@@ -108,7 +113,6 @@ local function doTeleport(pos) local h = getHRP(); if h and pos then h.CFrame = 
 local function notify(title, content) Fluent:Notify({ Title = title, Content = content, Duration = 4 }) end
 local function getExecutor() if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok then return name end end return "Unknown" end
 
--- UI TOAST SYSTEM (Floating notifications)
 local ToastGui = Instance.new("ScreenGui")
 ToastGui.Name = "TRS_Toasts"
 ToastGui.ResetOnSpawn = false
@@ -149,31 +153,17 @@ end
 -- ==========================================
 Tabs.Main:AddSection("Account Information")
 UI.HeaderPara = Tabs.Main:AddParagraph({ 
-    Title = "The Revenant: Sunrisen [HALLOWS 🎃]", 
+    Title = "The Revenant: Sunrisen [HALLOWS]", 
     Content = "HUD Made By @kyyabe08\n" .. L.welcome .. LocalPlayer.Name 
 })
 UI.NetStats = Tabs.Main:AddParagraph({ 
     Title = "System Status", 
-    Content = string.format("🟢 %s\n⚙️ %s%s", L.connected, L.executor, getExecutor()) 
+    Content = string.format("Connected: %s\n%s%s", L.connected, L.executor, getExecutor()) 
 })
 UI.LiveStats = Tabs.Main:AddParagraph({ Title = L.stats, Content = "..." })
 
 Tabs.Main:AddSection(L.abilities)
-local _loopSpeed = false
-local _loopSpeedVal = 16
-UI.loopSpeed = Tabs.Main:AddToggle("LoopSpeed", { Title = L.loopSpeed, Description = L.loopSpeedDesc, Default = false, Callback = function(s) _loopSpeed = s end })
-UI.loopSpeedSlider = Tabs.Main:AddSlider("LoopSpeedVal", { Title = "Speed Value", Default = 16, Min = 16, Max = 500, Rounding = 0, Callback = function(v) _loopSpeedVal = v end })
-
-task.spawn(function()
-    while task.wait(0.1) do
-        if _loopSpeed then
-            local hum = getHumanoid()
-            if hum and hum.WalkSpeed ~= _loopSpeedVal then hum.WalkSpeed = _loopSpeedVal end
-        end
-    end
-end)
-
-UI.reset = Tabs.Main:AddButton({ Title = L.reset, Callback = function() local h = getHumanoid(); if h then h.Health = 0 end end })
+UI.reset = Tabs.Main:AddButton({ Title = L.reset, Icon = "refresh-cw", Callback = function() local h = getHumanoid(); if h then h.Health = 0 end end })
 
 Tabs.Main:AddSection(L.vision)
 UI.fullbright = Tabs.Main:AddToggle("Fullbright", { Title = L.fullbright, Description = L.fullDesc, Default = false, Callback = function(s)
@@ -187,12 +177,12 @@ UI.fullbright = Tabs.Main:AddToggle("Fullbright", { Title = L.fullbright, Descri
 end })
 
 -- ==========================================
--- 2. COMBAT & ANTI-AFK
+-- 2. COMBAT & EXPLOITS (Aura Kill)
 -- ==========================================
 Tabs.Combat:AddSection(L.combat)
 local _autoClick = false
 local _clickDelay = 0.1
-UI.autoClick = Tabs.Combat:AddToggle("AutoClicker", { Title = L.autoClick, Description = L.clickDesc, Default = false, Callback = function(s) _autoClick = s end })
+UI.autoClick = Tabs.Combat:AddToggle("AutoClicker", { Title = L.autoClick, Description = L.clickDesc, Default = false, Icon = "mouse-pointer", Callback = function(s) _autoClick = s end })
 UI.clickDelay = Tabs.Combat:AddSlider("ClickDelay", { Title = L.delay, Default = 100, Min = 10, Max = 1000, Rounding = 0, Callback = function(v) _clickDelay = v / 1000 end })
 
 task.spawn(function()
@@ -214,11 +204,73 @@ task.spawn(function()
     end
 end)
 
-local _antiAfk = true
-UI.antiAfkToggle = Tabs.Utilities:AddToggle("AntiAFK", { Title = L.antiAfk, Default = true, Callback = function(s) _antiAfk = s end })
+Tabs.Exploits:AddSection(L.exploits)
+local _auraKill = false
+local _auraRange = 20
+local _auraKey = nil
+local _M_MRF_Remote = ReplicatedStorage:WaitForChild("Events", 10) and ReplicatedStorage.Events:FindFirstChild("M_MRF")
+local _hookConnected = false
+
+UI.auraKill = Tabs.Exploits:AddToggle("AuraKill", { Title = L.auraKill, Description = L.auraKillDesc, Default = false, Icon = "zap", Callback = function(s)
+    _auraKill = s
+    if s and not _auraKey then
+        notify("Aura Kill", "Waiting for a manual hit to capture key...")
+    end
+end })
+
+UI.auraRange = Tabs.Exploits:AddSlider("AuraRange", { Title = L.range, Default = 20, Min = 5, Max = 50, Rounding = 0, Callback = function(v) _auraRange = v end })
+
+-- Hook para capturar la llave del M_MRF
+if _M_MRF_Remote then
+    local oldInvoke = _M_MRF_Remote.InvokeServer
+    _M_MRF_Remote.InvokeServer = function(self, ...)
+        local args = {...}
+        if _auraKill and not _auraKey and args[2] and type(args[2]) == "string" and #args[2] > 20 then
+            _auraKey = args[2]
+            notify("Aura Kill", "Key captured successfully!")
+            showToast("Key Captured!", Color3.fromRGB(0, 255, 0))
+        end
+        return oldInvoke(self, ...)
+    end
+end
+
+-- Bucle de Aura Kill
 task.spawn(function()
-    while task.wait(60) do
-        if _antiAfk then pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end
+    while task.wait(0.2) do
+        if _auraKill and _auraKey and _M_MRF_Remote and LocalPlayer.Character then
+            local tool = LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
+            if tool then
+                local myHRP = getHRP()
+                if myHRP then
+                    local closest, dist = nil, _auraRange
+                    -- Busca enemigos (puedes añadir más NPCs aquí)
+                    for _, v in ipairs(Workspace:GetDescendants()) do
+                        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                            if v ~= LocalPlayer.Character and v.Humanoid.Health > 0 and v.Name ~= "Revenant" then
+                                local d = (v.HumanoidRootPart.Position - myHRP.Position).Magnitude
+                                if d < dist then dist = d; closest = v end
+                            end
+                        end
+                    end
+                    
+                    if closest then
+                        pcall(function()
+                            _M_MRF_Remote:InvokeServer(
+                                tool,
+                                _auraKey,
+                                "Attack",
+                                { SpeedMultiplier = 1, CurrentAttack = 1, DidCombo = false }
+                            )
+                        end)
+                        -- Simula el clic visual
+                        local cam = workspace.CurrentCamera
+                        VirtualUser:Button1Down(Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2), cam.CFrame)
+                        task.wait(0.05)
+                        VirtualUser:Button1Up(Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2), cam.CFrame)
+                    end
+                end
+            end
+        end
     end
 end)
 
@@ -227,8 +279,8 @@ end)
 -- ==========================================
 Tabs.Revenant:AddSection(L.revAct)
 local revESP = nil
-UI.revEspToggle = Tabs.Revenant:AddToggle("RevESP", { Title = L.revEsp, Description = L.revEspDesc, Default = false })
-UI.tpRev = Tabs.Revenant:AddButton({ Title = L.tpRev, Callback = function()
+UI.revEspToggle = Tabs.Revenant:AddToggle("RevESP", { Title = L.revEsp, Description = L.revEspDesc, Icon = "eye", Default = false })
+UI.tpRev = Tabs.Revenant:AddButton({ Title = L.tpRev, Icon = "navigation", Callback = function()
     local npcs = Workspace:FindFirstChild("NPCs")
     local rev = npcs and npcs:FindFirstChild("Revenant")
     local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
@@ -264,12 +316,12 @@ task.spawn(function()
         if rev and hum then
             if not revAlive then
                 revAlive = true
-                notify("🚨 Revenant", "The Revenant has spawned!")
+                notify("Revenant", "The Revenant has spawned!")
                 showToast("Revenant Spawned!", Color3.fromRGB(255, 50, 50))
             end
             if hum.Health <= 0 and revLastHP > 0 then
                 revAlive = false
-                notify("💀 Revenant", "The Revenant has died!")
+                notify("Revenant", "The Revenant has died!")
                 showToast("Revenant Died!", Color3.fromRGB(255, 50, 50))
             end
             revLastHP = hum.Health
@@ -277,7 +329,7 @@ task.spawn(function()
             if revAlive then
                 revAlive = false
                 revLastHP = 0
-                notify("❓ Revenant", "The Revenant has despawned/left.")
+                notify("Revenant", "The Revenant has despawned/left.")
             end
         end
     end
@@ -318,8 +370,8 @@ local function scanScraps()
     notify("Farm", "Found " .. count .. " scraps.")
 end
 
-UI.scan = Tabs.Farm:AddButton({ Title = L.scan, Description = L.scanDesc, Callback = scanScraps })
-UI.tpScrap = Tabs.Farm:AddButton({ Title = "Go to Closest Scrap", Callback = function()
+UI.scan = Tabs.Farm:AddButton({ Title = L.scan, Description = L.scanDesc, Icon = "search", Callback = scanScraps })
+UI.tpScrap = Tabs.Farm:AddButton({ Title = "Go to Closest Scrap", Icon = "navigation", Callback = function()
     local myHRP = getHRP(); if not myHRP then return end
     local closest, dist = nil, math.huge
     for scrap, _ in pairs(ScrapHighlights) do
@@ -333,8 +385,8 @@ UI.tpScrap = Tabs.Farm:AddButton({ Title = "Go to Closest Scrap", Callback = fun
     end
     if closest then local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart"); doTeleport(primary.Position) end
 end })
-UI.autoFarm = Tabs.Farm:AddToggle("AutoFarm", { Title = L.autoFarm, Description = L.autoFarmDesc, Default = false, Callback = function(s) _autoFarmScraps = s end })
-UI.autoPrompt = Tabs.Farm:AddToggle("AutoPrompt", { Title = L.prompts, Description = L.promptsDesc, Default = false, Callback = function(s) _autoPrompt = s end })
+UI.autoFarm = Tabs.Farm:AddToggle("AutoFarm", { Title = L.autoFarm, Description = L.autoFarmDesc, Icon = "map-pin", Default = false, Callback = function(s) _autoFarmScraps = s end })
+UI.autoPrompt = Tabs.Farm:AddToggle("AutoPrompt", { Title = L.prompts, Description = L.promptsDesc, Icon = "hand", Default = false, Callback = function(s) _autoPrompt = s end })
 
 task.spawn(function()
     while task.wait(1) do
@@ -386,8 +438,8 @@ end)
 -- ==========================================
 Tabs.Players:AddSection(L.players)
 local PlayerESP = {}
-UI.espToggle = Tabs.Players:AddToggle("PlayerESP", { Title = L.esp, Description = L.espDesc, Default = false })
-UI.tpClosest = Tabs.Players:AddButton({ Title = L.tpClosest, Callback = function()
+UI.espToggle = Tabs.Players:AddToggle("PlayerESP", { Title = L.esp, Description = L.espDesc, Icon = "eye", Default = false })
+UI.tpClosest = Tabs.Players:AddButton({ Title = L.tpClosest, Icon = "navigation", Callback = function()
     local myHRP = getHRP(); if not myHRP then return end
     local closest, dist = nil, math.huge
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -417,7 +469,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 6. SERVER LOGS & WORLD TRACKERS
+-- 6. SERVER LOGS
 -- ==========================================
 Tabs.Logs:AddSection(L.logs)
 local hourText = Tabs.Logs:AddParagraph({ Title = L.hourLog, Content = "None yet." })
@@ -460,7 +512,7 @@ task.spawn(function()
             if val and val ~= "" and val ~= "None" then
                 hourHistory[val] = (hourHistory[val] or 0) + 1
                 addWorldLog("Hour Activated: " .. val, Color3.fromRGB(255, 200, 0))
-                notify("🕒 Hour", val .. " has started!")
+                notify("Hour", val .. " has started!")
                 updateLogs()
             end
         end))
@@ -473,7 +525,7 @@ task.spawn(function()
             if val and val ~= "" and val ~= "None" then
                 roundHistory[val] = (roundHistory[val] or 0) + 1
                 addWorldLog("Round Activated: " .. val, Color3.fromRGB(200, 50, 200))
-                notify("⚔️ Round", val .. " has started!")
+                notify("Round", val .. " has started!")
                 updateLogs()
             end
         end))
@@ -484,10 +536,10 @@ task.spawn(function()
         track(BM_Active.Changed:Connect(function(val)
             if val then
                 addWorldLog("Black Market is OPEN", Color3.fromRGB(0, 255, 0))
-                notify("💰 Black Market", "The Black Market has opened!")
+                notify("Black Market", "The Black Market has opened!")
             else
                 addWorldLog("Black Market CLOSED", Color3.fromRGB(255, 0, 0))
-                notify("💰 Black Market", "The Black Market has closed.")
+                notify("Black Market", "The Black Market has closed.")
             end
         end))
     end
@@ -500,7 +552,7 @@ task.spawn(function()
         if shed and not shedExisted then
             shedExisted = true
             addWorldLog("Shed has spawned!", Color3.fromRGB(150, 0, 255))
-            notify("🏠 Shed", "The Shed has appeared!")
+            notify("Shed", "The Shed has appeared!")
         elseif not shed and shedExisted then
             shedExisted = false
             addWorldLog("Shed has despawned.", Color3.fromRGB(100, 100, 100))
@@ -509,7 +561,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 7. TELEPORT & UTILITIES
+-- 7. TELEPORT, OPTIMIZATION & UTILITIES
 -- ==========================================
 Tabs.Teleport:AddSection(L.teleport)
 local locs = {
@@ -518,10 +570,10 @@ local locs = {
     ["Bunker Inside"] = Vector3.new(-137, -112, 359), ["Church"] = Vector3.new(359, 16, 403),
     ["Cave"] = Vector3.new(110, 14, -209)
 }
-for name, pos in pairs(locs) do Tabs.Teleport:AddButton({ Title = L.goTo .. name, Callback = function() doTeleport(pos) end }) end
+for name, pos in pairs(locs) do Tabs.Teleport:AddButton({ Title = L.goTo .. name, Icon = "map-pin", Callback = function() doTeleport(pos) end }) end
 
 Tabs.Utilities:AddSection(L.util)
-UI.antiRag = Tabs.Utilities:AddToggle("AntiRagdoll", { Title = L.antiRag, Default = true })
+UI.antiRag = Tabs.Utilities:AddToggle("AntiRagdoll", { Title = L.antiRag, Icon = "shield-check", Default = true })
 task.spawn(function()
     while task.wait(0.5) do
         if Options.AntiRagdoll.Value and LocalPlayer.Character then
@@ -531,18 +583,15 @@ task.spawn(function()
     end
 end)
 
-UI.fpsBoost = Tabs.Utilities:AddButton({ Title = L.boost, Description = L.boostDesc, Callback = function()
-    local count = 0
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
-            v.Enabled = false
-            count = count + 1
-        end
+local _antiAfk = true
+UI.antiAfkToggle = Tabs.Utilities:AddToggle("AntiAFK", { Title = L.antiAfk, Icon = "clock", Default = true, Callback = function(s) _antiAfk = s end })
+task.spawn(function()
+    while task.wait(60) do
+        if _antiAfk then pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end
     end
-    notify("FPS Booster", "Disabled " .. count .. " effects.")
-end })
+end)
 
-UI.hop = Tabs.Utilities:AddButton({ Title = L.hop, Description = L.hopDesc, Callback = function()
+UI.hop = Tabs.Utilities:AddButton({ Title = L.hop, Description = L.hopDesc, Icon = "server", Callback = function()
     notify("Server Hop", "Searching for a new server...")
     pcall(function()
         local http = game:GetService("HttpService")
@@ -554,6 +603,29 @@ UI.hop = Tabs.Utilities:AddButton({ Title = L.hop, Description = L.hopDesc, Call
             end
         end
     end)
+end })
+
+Tabs.Utilities:AddSection(L.opti)
+UI.optiTerrain = Tabs.Utilities:AddToggle("OptiTerrain", { Title = L.optiTerrain, Description = L.optiTerrainDesc, Icon = "trees", Default = false, Callback = function(s)
+    pcall(function()
+        local Terrain = Workspace:FindFirstChildOfClass("Terrain")
+        if Terrain then Terrain.Decoration = not s end
+    end)
+end })
+
+UI.optiMat = Tabs.Utilities:AddToggle("OptiMat", { Title = L.optiMat, Description = L.optiMatDesc, Icon = "layout", Default = false, Callback = function(s)
+    local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
+    if map then
+        for _, v in ipairs(map:GetDescendants()) do
+            if v:IsA("BasePart") then
+                if s then v.Material = Enum.Material.SmoothPlastic end
+            end
+        end
+    end
+end })
+
+UI.optiShadow = Tabs.Utilities:AddToggle("OptiShadow", { Title = L.optiShadow, Description = L.optiShadowDesc, Icon = "sun", Default = false, Callback = function(s)
+    Lighting.GlobalShadows = not s
 end })
 
 -- ==========================================
@@ -602,7 +674,7 @@ task.spawn(function()
                 speedText = math.floor(Vector3.new(vel.X, 0, vel.Z).Magnitude)
                 if revHRP then revText = math.floor((revHRP.Position - hrp.Position).Magnitude) .. " studs" end
             end
-            UI.LiveStats:SetDesc(string.format("Health: %s\nSpeed: %s\nRev Dist: %s\nFPS: %d", hpText, speedText, revText, fps))
+            UI.LiveStats:SetDesc(string.format("Health: %s\nWalkSpd: %s\nRev Dist: %s\nFPS: %d", hpText, speedText, revText, fps))
         end
     end)
 end)
