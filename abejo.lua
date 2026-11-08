@@ -14,6 +14,7 @@ local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local Lighting = game:GetService("Lighting")
+local Terrain = Workspace:FindFirstChildOfClass("Terrain")
 
 local okFluent, Fluent = pcall(function()
     return loadstring(game:HttpGetAsync("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -51,7 +52,7 @@ local Window = Fluent:CreateWindow({
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl,
     LoadingTitle = "TRS Panel",
-    LoadingSubtitle = "Cargando preferencias y módulos..."
+    LoadingSubtitle = "Loading modules and preferences..."
 })
 
 _G.__TRS_WINDOW = Window
@@ -64,7 +65,7 @@ local Tabs = {
     Revenant = Window:AddTab({ Title = "Revenant", Icon = "skull" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "map-pin" }),
     Utilities = Window:AddTab({ Title = "Utilities", Icon = "wrench" }),
-    Optimization = Window:AddTab({ Title = "Optimization", Icon = "zap" }),
+    Optimization = Window:AddTab({ Title = "Optimization", Icon = "gauge" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -105,10 +106,10 @@ local function doTeleport(pos)
     return true
 end
 
-Tabs.Main:AddParagraph({ Title = "Estado del Sistema", Content = "Todos los módulos cargados correctamente." })
-local StatsParagraph = Tabs.Main:AddParagraph({ Title = "Información", Content = "Esperando datos..." })
+Tabs.Main:AddParagraph({ Title = "System Status", Content = "All modules loaded successfully." })
+local StatsParagraph = Tabs.Main:AddParagraph({ Title = "Information", Content = "Waiting for data..." })
 
-Tabs.Main:AddSection("Habilidades")
+Tabs.Main:AddSection("Abilities")
 local hooksInitialized = false
 local oldTakeStamina, oldCheckStamina
 local lastHookAttempt = 0
@@ -151,25 +152,25 @@ local function InitStaminaHooks()
 end
 
 Tabs.Main:AddToggle("StaminaInf", {
-    Title = "Stamina Infinita",
+    Title = "Infinite Stamina",
     Default = false,
     Callback = function(state)
         if state and not hooksInitialized then InitStaminaHooks() end
-        if state then Notify.Success("Habilidades", "Stamina Infinita: ON") else Notify.Info("Habilidades", "Stamina Infinita: OFF") end
+        if state then Notify.Success("Abilities", "Infinite Stamina: ON") else Notify.Info("Abilities", "Infinite Stamina: OFF") end
     end
 })
 
 Tabs.Main:AddButton({
-    Title = "Reiniciar Personaje",
-    Description = "Respawn rápido",
+    Title = "Reset Character",
+    Description = "Fast respawn",
     Callback = function()
         local hum = getHumanoid()
-        if hum then Notify.Info("Personaje", "Reiniciando personaje..."); hum.Health = 0
-        else Notify.Error("Personaje", "No se encontró el Humanoid.") end
+        if hum then Notify.Info("Character", "Resetting character..."); hum.Health = 0
+        else Notify.Error("Character", "Humanoid not found.") end
     end
 })
 
-Tabs.Combat:AddSection("Automatización")
+Tabs.Combat:AddSection("Automation")
 local _autoClick = false
 local _clickDelay = 0.1
 
@@ -207,31 +208,7 @@ task.spawn(function()
     end
 end)
 
-Tabs.Utilities:AddSection("Bypasses")
-local _antiRagdoll = true
-
-Tabs.Utilities:AddToggle("AntiRagdoll", {
-    Title = "Anti Ragdoll",
-    Default = true,
-    Callback = function(state)
-        _antiRagdoll = state
-        if state then Notify.Success("Utility", "Anti Ragdoll: ON") else Notify.Info("Utility", "Anti Ragdoll: OFF") end
-    end
-})
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if _antiRagdoll and LocalPlayer.Character then
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                pcall(function()
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-                end)
-            end
-        end
-    end
-end)
+Tabs.Utilities:AddSection("Game Utilities")
 
 local ScrapHighlights = {}
 local _autoFarmScraps = false
@@ -245,7 +222,7 @@ local function scanScraps()
     clearHighlights()
     local map = Workspace:FindFirstChild("MAP") or Workspace:FindFirstChild("Map")
     local folder = map and map:FindFirstChild("Scraps")
-    if not folder then Notify.Error("Farm", "Carpeta de Scraps no encontrada."); return 0 end
+    if not folder then Notify.Error("Farm", "Scraps folder not found."); return 0 end
     
     local count = 0
     for _, desc in ipairs(folder:GetDescendants()) do
@@ -264,21 +241,21 @@ local function scanScraps()
             end
         end
     end
-    if count > 0 then Notify.Success("Farm", "Se detectaron " .. count .. " scraps.") else Notify.Warning("Farm", "No se encontraron scraps.") end
+    if count > 0 then Notify.Success("Farm", "Detected " .. count .. " scraps.") else Notify.Warning("Farm", "No scraps found.") end
     return count
 end
 
 Tabs.Farm:AddButton({
-    Title = "Escanear Scraps",
-    Description = "Resalta todos los scraps del mapa",
+    Title = "Scan Scraps",
+    Description = "Highlights all scraps on the map",
     Callback = function() scanScraps() end
 })
 
 Tabs.Farm:AddButton({
-    Title = "Ir al Scrap Más Cercano",
+    Title = "Teleport to Closest Scrap",
     Callback = function()
         local myHRP = getHRP()
-        if not myHRP then Notify.Error("Farm", "Personaje no disponible."); return end
+        if not myHRP then Notify.Error("Farm", "Character unavailable."); return end
         local closest, dist = nil, math.huge
         for scrap, _ in pairs(ScrapHighlights) do
             if scrap.Parent then
@@ -292,13 +269,13 @@ Tabs.Farm:AddButton({
         if closest then
             local primary = closest.PrimaryPart or closest:FindFirstChildWhichIsA("BasePart")
             doTeleport(primary.Position)
-            Notify.Success("Farm", "Teletransportado a Scrap.")
-        else Notify.Warning("Farm", "No hay scraps escaneados.") end
+            Notify.Success("Farm", "Teleported to Scrap.")
+        else Notify.Warning("Farm", "No scanned scraps found.") end
     end
 })
 
 Tabs.Farm:AddToggle("AutoFarm", {
-    Title = "Auto Farm (Teletransporte)",
+    Title = "Auto Farm (Teleport)",
     Default = false,
     Callback = function(state)
         _autoFarmScraps = state
@@ -334,7 +311,7 @@ task.spawn(function()
     end
 end)
 
-Tabs.Revenant:AddSection("NPC")
+Tabs.Revenant:AddSection("NPC Tracking")
 local _revenantTracking = false
 local _revenantPresent = false
 local _revenantConnection = nil
@@ -352,7 +329,7 @@ local function startRevenantTracking()
     _revenantPresent = rev ~= nil
     
     if _revenantPresent then 
-        Notify.Success("Revenant", "Revenant detectado. Highlight activado.")
+        Notify.Success("Revenant", "Revenant detected. Highlight enabled.")
         if not _revenantHighlight then
             _revenantHighlight = Instance.new("Highlight")
             _revenantHighlight.FillColor = Color3.fromRGB(255, 0, 0)
@@ -363,13 +340,13 @@ local function startRevenantTracking()
             _revenantHighlight.Parent = rev
         end
     else 
-        Notify.Info("Revenant", "Esperando aparición...") 
+        Notify.Info("Revenant", "Waiting for spawn...") 
     end
     
     _revenantConnection = Workspace.DescendantAdded:Connect(function(desc)
         if desc.Name == "Revenant" and desc:IsA("Model") and not _revenantPresent then
             _revenantPresent = true
-            Notify.Success("Revenant", "Revenant ha aparecido. Highlight activado.")
+            Notify.Success("Revenant", "Revenant spawned. Highlight enabled.")
             if not _revenantHighlight then
                 _revenantHighlight = Instance.new("Highlight")
                 _revenantHighlight.FillColor = Color3.fromRGB(255, 0, 0)
@@ -387,7 +364,7 @@ local function startRevenantTracking()
         if desc.Name == "Revenant" and desc:IsA("Model") and _revenantPresent then
             _revenantPresent = false
             _revenantHighlight = nil
-            Notify.Warning("Revenant", "Revenant ha desaparecido.")
+            Notify.Warning("Revenant", "Revenant despawned.")
         end
     end)
     track(_revenantRemovedConnection)
@@ -398,11 +375,11 @@ local function stopRevenantTracking()
     if _revenantRemovedConnection then _revenantRemovedConnection:Disconnect(); _revenantRemovedConnection = nil end
     if _revenantHighlight then _revenantHighlight:Destroy(); _revenantHighlight = nil end
     _revenantPresent = false
-    Notify.Info("Revenant", "Tracking y Highlight desactivados.")
+    Notify.Info("Revenant", "Tracking and Highlight disabled.")
 end
 
 Tabs.Revenant:AddToggle("RevenantTrack", {
-    Title = "Trackear Revenant (Highlight)",
+    Title = "Track Revenant (Highlight)",
     Default = false,
     Callback = function(state)
         _revenantTracking = state
@@ -411,23 +388,67 @@ Tabs.Revenant:AddToggle("RevenantTrack", {
 })
 
 Tabs.Revenant:AddButton({
-    Title = "Ir al Revenant",
+    Title = "Teleport to Revenant",
     Callback = function()
         local rev = getRevenant()
         local hrp = rev and rev:FindFirstChild("HumanoidRootPart")
         if hrp then
             doTeleport(hrp.Position)
-            Notify.Success("Revenant", "Teletransportado al Revenant.")
-        else Notify.Error("Revenant", "No se encontró el Revenant.") end
+            Notify.Success("Revenant", "Teleported to Revenant.")
+        else Notify.Error("Revenant", "Revenant not found.") end
     end
 })
 
-Tabs.Players:AddSection("Acciones Rápidas")
+Tabs.Players:AddSection("Player Tracking")
+Tabs.Players:AddToggle("PlayerTracker", {
+    Title = "Enable Player Tracker",
+    Default = false,
+    Callback = function(state)
+        if state then Notify.Success("Players", "Player Tracker: ON") else Notify.Info("Players", "Player Tracker: OFF") end
+    end
+})
+
+local TrackerHighlights = {}
+task.spawn(function()
+    while task.wait(1) do
+        if Options.PlayerTracker and Options.PlayerTracker.Value then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        if not TrackerHighlights[plr] then
+                            local hl = Instance.new("Highlight")
+                            hl.FillColor = Color3.fromRGB(0, 255, 0)
+                            hl.FillTransparency = 0.7
+                            hl.OutlineColor = Color3.fromRGB(0, 255, 0)
+                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            hl.Adornee = plr.Character
+                            hl.Parent = plr.Character
+                            TrackerHighlights[plr] = hl
+                        end
+                    end
+                end
+            end
+            for plr, hl in pairs(TrackerHighlights) do
+                if not plr.Character or not plr.Character.Parent then
+                    if hl then hl:Destroy() end
+                    TrackerHighlights[plr] = nil
+                end
+            end
+        else
+            for plr, hl in pairs(TrackerHighlights) do
+                if hl then hl:Destroy() end
+                TrackerHighlights[plr] = nil
+            end
+        end
+    end
+end)
+
 Tabs.Players:AddButton({
-    Title = "Ir al Jugador Más Cercano",
+    Title = "Teleport to Closest Player",
     Callback = function()
         local myHRP = getHRP()
-        if not myHRP then Notify.Error("Players", "Personaje no disponible."); return end
+        if not myHRP then Notify.Error("Players", "Character unavailable."); return end
         local closest, dist, closestName = nil, math.huge, nil
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
@@ -440,13 +461,13 @@ Tabs.Players:AddButton({
         end
         if closest and dist <= 500 then
             doTeleport(closest.Position)
-            Notify.Success("Players", "Teletransportado a " .. closestName)
-        elseif closest then Notify.Warning("Players", "Jugador fuera de rango (500 studs).")
-        else Notify.Warning("Players", "No hay jugadores cercanos.") end
+            Notify.Success("Players", "Teleported to " .. closestName)
+        elseif closest then Notify.Warning("Players", "Closest player is out of range (500 studs).")
+        else Notify.Warning("Players", "No nearby players.") end
     end
 })
 
-Tabs.Teleport:AddSection("Ubicaciones")
+Tabs.Teleport:AddSection("Locations")
 local locations = {
     ["Shop"] = Vector3.new(-287, -13, -454),
     ["Power Station"] = Vector3.new(-244, 21, 212),
@@ -461,15 +482,15 @@ for name, pos in pairs(locations) do
     Tabs.Teleport:AddButton({
         Title = name,
         Callback = function()
-            if doTeleport(pos) then Notify.Success("Teleport", "Viajando a " .. name)
-            else Notify.Error("Teleport", "No se pudo teletransportar.") end
+            if doTeleport(pos) then Notify.Success("Teleport", "Traveling to " .. name)
+            else Notify.Error("Teleport", "Failed to teleport.") end
         end
     })
 end
 
-Tabs.Optimization:AddSection("Rendimiento Global")
+Tabs.Optimization:AddSection("Visual & Performance")
 Tabs.Optimization:AddToggle("OptLighting", {
-    Title = "Desactivar Sombras y Luces",
+    Title = "Disable Shadows & Lights",
     Default = false,
     Callback = function(state)
         if state then
@@ -479,33 +500,33 @@ Tabs.Optimization:AddToggle("OptLighting", {
             for _, v in pairs(Lighting:GetDescendants()) do
                 if v:IsA("PostEffect") or v:IsA("Sky") then v.Enabled = false end
             end
-            Notify.Success("Optimization", "Luces y sombras desactivadas.")
+            Notify.Success("Optimization", "Shadows and lights disabled.")
         else
             Lighting.GlobalShadows = true
             Lighting.FogEnd = 100000
             Lighting.Brightness = 1
-            Notify.Info("Optimization", "Luces restauradas.")
+            Notify.Info("Optimization", "Lights restored.")
         end
     end
 })
 
 Tabs.Optimization:AddToggle("OptTextures", {
-    Title = "Quitar Texturas de Mapa",
+    Title = "Remove Map Textures",
     Default = false,
     Callback = function(state)
         if state then
             for _, v in pairs(Workspace:GetDescendants()) do
                 if v:IsA("Decal") or v:IsA("Texture") then v.Transparency = 1 end
             end
-            Notify.Success("Optimization", "Texturas ocultas.")
+            Notify.Success("Optimization", "Textures hidden.")
         else
-            Notify.Info("Optimization", "Las texturas volverán al reiniciar o cambiar de mapa.")
+            Notify.Info("Optimization", "Textures will return on respawn or map change.")
         end
     end
 })
 
 Tabs.Optimization:AddToggle("OptParticles", {
-    Title = "Quitar Partículas",
+    Title = "Disable All Particles",
     Default = false,
     Callback = function(state)
         if state then
@@ -514,14 +535,32 @@ Tabs.Optimization:AddToggle("OptParticles", {
                     v.Enabled = false
                 end
             end
-            Notify.Success("Optimization", "Partículas y humo desactivados.")
+            Notify.Success("Optimization", "Particles and smoke disabled.")
+        end
+    end
+})
+
+Tabs.Optimization:AddToggle("OptTerrain", {
+    Title = "Simplify Terrain (Remove Details)",
+    Default = false,
+    Callback = function(state)
+        if Terrain then
+            if state then
+                Terrain.Decoration = false
+                Notify.Success("Optimization", "Terrain details removed.")
+            else
+                Terrain.Decoration = true
+                Notify.Info("Optimization", "Terrain details restored.")
+            end
+        else
+            Notify.Error("Optimization", "Terrain not found in Workspace.")
         end
     end
 })
 
 Tabs.Optimization:AddButton({
-    Title = "Destruir Efectos Cercanos",
-    Description = "Borra partículas a tu alrededor",
+    Title = "Destroy Nearby Effects",
+    Description = "Clears particles around you",
     Callback = function()
         local hrp = getHRP()
         if hrp then
@@ -534,8 +573,21 @@ Tabs.Optimization:AddButton({
                     end
                 end
             end
-            Notify.Success("Optimization", "Efectos cercanos destruidos.")
+            Notify.Success("Optimization", "Nearby effects destroyed.")
         end
+    end
+})
+
+Tabs.Optimization:AddButton({
+    Title = "Make All Materials Smooth",
+    Description = "Removes detailed textures from parts",
+    Callback = function()
+        for _, v in pairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Material ~= Enum.Material.SmoothPlastic then
+                v.Material = Enum.Material.SmoothPlastic
+            end
+        end
+        Notify.Success("Optimization", "All materials set to Smooth Plastic.")
     end
 })
 
@@ -554,7 +606,7 @@ end
 task.spawn(function()
     task.wait(1.5)
     pcall(function() Window:SelectTab(1) end)
-    Notify.Success("TRS Panel", "Sistema inicializado correctamente.", 4)
+    Notify.Success("TRS Panel", "System initialized successfully.", 4)
 end)
 
 task.spawn(function()
@@ -566,8 +618,8 @@ task.spawn(function()
             local speed = math.floor(Vector3.new(vel.X, 0, vel.Z).Magnitude)
             local hp = math.floor(hum.Health)
             local maxhp = math.floor(hum.MaxHealth)
-            StatsParagraph:SetDesc(string.format("Velocidad: %d | Salud: %d/%d", speed, hp, maxhp))
-        else StatsParagraph:SetDesc("Esperando personaje...") end
+            StatsParagraph:SetDesc(string.format("Speed: %d | Health: %d/%d", speed, hp, maxhp))
+        else StatsParagraph:SetDesc("Waiting for character...") end
     end
 end)
 
