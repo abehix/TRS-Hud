@@ -43,7 +43,7 @@ local Translations = {
         stats = "Live Stats", abilities = "Player Abilities", reset = "Reset Character",
         vision = "Environment", fullbright = "Fullbright", fullDesc = "Removes fog and darkness",
         combat = "Combat System", autoClick = "Auto Clicker", clickDesc = "Activates tools automatically",
-        delay = "Delay (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (Hook)", auraKillDesc = "Requires 1 manual hit first to grab the key",
+        delay = "Delay (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (M_MRF)", auraKillDesc = "Requires 1 manual hit to get key",
         range = "Kill Range (studs)", players = "Player Actions", tpClosest = "Teleport to Closest",
         esp = "Player ESP", espDesc = "Highlights other players", revAct = "Revenant Tracker",
         revEsp = "Revenant ESP", revEspDesc = "Highlights the boss", tpRev = "Go to Revenant",
@@ -56,14 +56,14 @@ local Translations = {
         optiShadow = "Disable Shadows", optiShadowDesc = "Turns off shadows",
         hop = "Server Hop", hopDesc = "Joins a new server", settings = "Settings",
         lang = "Language (Reloads UI)", logs = "Server Logs", hourLog = "Hour Activations",
-        roundLog = "Round Activations", worldLog = "World Events", sniffer = "Network Sniffer", snifferDesc = "Logs M_MRF events"
+        roundLog = "Round Activations", worldLog = "World Events"
     },
     MX = {
         welcome = "Bienvenido, ", connected = "Conectado", executor = "Executor: ",
         stats = "Stats en Vivo", abilities = "Habilidades", reset = "Reiniciar Personaje",
         vision = "Entorno", fullbright = "Fullbright", fullDesc = "Quita la niebla y oscuridad",
         combat = "Sistema de Combate", autoClick = "Auto Clicker", clickDesc = "Activa herramientas automáticamente",
-        delay = "Retardo (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (Hook)", auraKillDesc = "Requiere 1 golpe manual primero para obtener la llave",
+        delay = "Retardo (ms)", exploits = "Exploits / Aura", auraKill = "Aura Kill (M_MRF)", auraKillDesc = "Requiere 1 golpe manual para obtener la llave",
         range = "Rango de Muerte (studs)", players = "Acciones de Jugadores", tpClosest = "Ir al Más Cercano",
         esp = "ESP de Jugadores", espDesc = "Resalta a otros jugadores", revAct = "Rastreador Revenant",
         revEsp = "ESP del Revenant", revEspDesc = "Resalta al jefe", tpRev = "Ir al Revenant",
@@ -76,14 +76,14 @@ local Translations = {
         optiShadow = "Apagar Sombras", optiShadowDesc = "Desactiva sombras",
         hop = "Server Hop", hopDesc = "Salta a un servidor nuevo", settings = "Ajustes",
         lang = "Idioma (Recarga la UI)", logs = "Registros del Servidor", hourLog = "Horas Activadas",
-        roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo", sniffer = "Network Sniffer", snifferDesc = "Registra eventos M_MRF"
+        roundLog = "Rondas Activadas", worldLog = "Eventos del Mundo"
     }
 }
 local L = Translations[CurrentLang]
 
 local Window = Fluent:CreateWindow({
     Title = "The Revenant: Sunrisen [HALLOWS] - HUD Made By @kyyabe08",
-    SubTitle = "v19.0 Ultimate Pro Edition",
+    SubTitle = "v20.0 Ultimate Pro Edition",
     TabWidth = 180,
     Size = UDim2.fromOffset(650, 520),
     Acrylic = false,
@@ -209,32 +209,32 @@ local _auraKill = false
 local _auraRange = 20
 local _auraKey = nil
 local _M_MRF_Remote = ReplicatedStorage:WaitForChild("Events", 10) and ReplicatedStorage.Events:FindFirstChild("M_MRF")
-local _hookConnected = false
 
 UI.auraKill = Tabs.Exploits:AddToggle("AuraKill", { Title = L.auraKill, Description = L.auraKillDesc, Default = false, Icon = "zap", Callback = function(s)
     _auraKill = s
     if s and not _auraKey then
-        notify("Aura Kill", "Waiting for a manual hit to capture key...")
+        notify("Aura Kill", "Hit an enemy manually once to capture the key!")
     end
 end })
 
 UI.auraRange = Tabs.Exploits:AddSlider("AuraRange", { Title = L.range, Default = 20, Min = 5, Max = 50, Rounding = 0, Callback = function(v) _auraRange = v end })
 
--- Hook para capturar la llave del M_MRF
-if _M_MRF_Remote then
-    local oldInvoke = _M_MRF_Remote.InvokeServer
-    _M_MRF_Remote.InvokeServer = function(self, ...)
-        local args = {...}
-        if _auraKill and not _auraKey and args[2] and type(args[2]) == "string" and #args[2] > 20 then
-            _auraKey = args[2]
-            notify("Aura Kill", "Key captured successfully!")
-            showToast("Key Captured!", Color3.fromRGB(0, 255, 0))
+if _M_MRF_Remote and hookmetamethod then
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if not checkcaller() and self == _M_MRF_Remote and (method == "InvokeServer" or method == "FireServer") then
+            local args = {...}
+            if _auraKill and not _auraKey and args[2] and type(args[2]) == "string" and #args[2] > 20 then
+                _auraKey = args[2]
+                notify("Aura Kill", "Key captured successfully!")
+                showToast("Key Captured!", Color3.fromRGB(0, 255, 0))
+            end
         end
-        return oldInvoke(self, ...)
-    end
+        return oldNamecall(self, ...)
+    end)
 end
 
--- Bucle de Aura Kill
 task.spawn(function()
     while task.wait(0.2) do
         if _auraKill and _auraKey and _M_MRF_Remote and LocalPlayer.Character then
@@ -243,10 +243,9 @@ task.spawn(function()
                 local myHRP = getHRP()
                 if myHRP then
                     local closest, dist = nil, _auraRange
-                    -- Busca enemigos (puedes añadir más NPCs aquí)
                     for _, v in ipairs(Workspace:GetDescendants()) do
                         if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-                            if v ~= LocalPlayer.Character and v.Humanoid.Health > 0 and v.Name ~= "Revenant" then
+                            if v ~= LocalPlayer.Character and v.Humanoid.Health > 0 then
                                 local d = (v.HumanoidRootPart.Position - myHRP.Position).Magnitude
                                 if d < dist then dist = d; closest = v end
                             end
@@ -262,7 +261,6 @@ task.spawn(function()
                                 { SpeedMultiplier = 1, CurrentAttack = 1, DidCombo = false }
                             )
                         end)
-                        -- Simula el clic visual
                         local cam = workspace.CurrentCamera
                         VirtualUser:Button1Down(Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2), cam.CFrame)
                         task.wait(0.05)
