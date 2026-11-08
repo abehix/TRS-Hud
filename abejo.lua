@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local function safeGet(url)
     local ok, res = pcall(function() return game:HttpGet(url) end)
     if ok and res then return res end
+    
     return nil
 end
 
